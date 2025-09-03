@@ -1,18 +1,27 @@
 //
-//  CluetoothApp.swift
+//  ModelContainerManager.swift
 //  Cluetooth
 //
 //  Created by Edu Caubilla on 2/9/25.
 //
 
-import SwiftUI
+import Foundation
 import SwiftData
 
-@main
-struct CluetoothApp: App {
+/** Initializes the Context to use SwiftData.
+
+ */
+struct ModelContainerContext {
+    //MARK: - PROPERTIES
+    static let shared : ModelContainerContext = .init()
+
+    //MARK: - INITIALIZER
+    private init() {}
+
+    //MARK: - FUNCTIONS
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Device.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -22,11 +31,4 @@ struct CluetoothApp: App {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
-
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-        .modelContainer(sharedModelContainer)
-    }
 }
