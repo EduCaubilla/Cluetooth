@@ -10,33 +10,46 @@ import CoreBluetooth
 
 class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
     //MARK: - PROPERTIES
+    static let shared = CBServiceManager()
+
     @Published var state: BluetoothState
     @Published var discoveredDevices: [Device]
     @Published var connectedDevice: Device?
     @Published var isScanning: Bool
 
-    private let centralManager: CBCentralManager
+    private var centralManager: CBCentralManager
     private let peripheralManager: CBPeripheralManager
 
     private var connectedPeripheral: CBPeripheral?
     private var targetServiceUUIDs: [CBUUID] = []
     private var characteristics: [CBUUID: CBCharacteristic] = [:]
 
-    private let scanTimeout: TimeInterval = 25.0
+    private let scanTimeout: TimeInterval = 2.0
     private var scanTimer: Timer?
+
+    var onScanFinished: (([Device]) -> Void)?
 
     //MARK: - INITIALIZER
     override init() {
-        centralManager = .init(delegate: nil, queue: nil)
+        state = .unknown
+        discoveredDevices = []
+        connectedDevice = nil
+        isScanning = false
+        peripheralManager = CBPeripheralManager(delegate: nil, queue: nil)
+        centralManager = CBCentralManager(delegate: nil, queue: nil)
 
         super.init()
-        centralManager.delegate = self
+        centralManager = CBCentralManager(delegate: self, queue: nil)
     }
 
     //MARK: - FUNCTIONS
+    //MARK: - Scan
     func startScanning(for serviceUUIDs: [CBUUID]? = nil) {
+        centralManagerDidUpdateState(centralManager)
+
          guard centralManager.state == .poweredOn else {
             state = .poweredOff
+             onScanFinished?([])
             return
         }
 
@@ -47,13 +60,17 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
         )
 
-        scanTimer = Timer.scheduledTimer(withTimeInterval: scanTimeout, repeats: false, block: { _ in
-            self.stopScanning()
-        })
+//        scanTimer = Timer.scheduledTimer(withTimeInterval: scanTimeout, repeats: false, block: { _ in
+//            self.stopScanning()
+//        })
+        DispatchQueue.main.asyncAfter(deadline: .now() + scanTimeout) { [weak self] in
+            self?.stopScanning()
+        }
 
         print("Started scanning...")
     }
 
+    //MARK: - Stop scan
     func stopScanning() {
         centralManager.stopScan()
         isScanning = false
@@ -64,25 +81,36 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
             state = .poweredOn
         }
 
+        onScanFinished?(discoveredDevices)
+
         print("Stopped scanning.")
     }
 
+    //MARK: - Connect
     func connect(to device: Device) {
         stopScanning()
         state = .connecting
-        centralManager.connect(device.peripheral, options: nil)
+
+        guard let connectPeripheral = device.peripheral else {
+            state = .poweredOn
+            print("Peripheral not found.")
+            return
+        }
+        centralManager.connect(connectPeripheral, options: nil)
 
         connectedDevice = device
         print("Trying to connect to \(device.name)...")
     }
 
+    //MARK: - Disconnect
     func disconnect(from device: Device) {
-        guard device.name.isEmpty else { return }
-        centralManager.cancelPeripheralConnection(device.peripheral)
+        guard let disconnectPeripheral = device.peripheral else { return }
+        centralManager.cancelPeripheralConnection(disconnectPeripheral)
 
         print("Disconnecting from peripheral ")
     }
 
+    //MARK: - Write
     func writeData(_ data: Data, to characteristicUUID: CBUUID) {
         guard let peripheral = connectedDevice,
               let characteristic = characteristics[characteristicUUID] else {
@@ -91,10 +119,16 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         }
 
         let writeType: CBCharacteristicWriteType = characteristic.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
-        peripheral.peripheral.writeValue(data, for: characteristic, type: writeType)
+
+        guard let writePeripheral = peripheral.peripheral else {
+            print("Cannot write: peripheral not available.")
+            return
+        }
+        writePeripheral.writeValue(data, for: characteristic, type: writeType)
         print("Write data for characteristic: \(characteristicUUID)")
     }
 
+    //MARK: - Read
     func readValue(for characteristicUUID: CBUUID) {
         guard let peripheral = connectedDevice?.peripheral,
               let characteristic = characteristics[characteristicUUID] else {
@@ -106,6 +140,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         print("Read value for characteristic: \(characteristicUUID)")
     }
 
+    //MARK: - Reset
     func resetConnection(){
         connectedPeripheral = nil
         connectedDevice = nil
@@ -114,6 +149,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
     }
 }
 
+//MARK: - EXT CBCENTRALMANAGERDELEGATE
 extension CBServiceManager: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
@@ -139,14 +175,20 @@ extension CBServiceManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         let deviceName = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown Peripheral"
 
+        if deviceName.isEmpty || deviceName == "Unknown Peripheral" {
+            return
+        }
+
         let device = Device(
             peripheral: peripheral,
             name: peripheral.name ?? "Unknown Peripheral",
-            services: advertisementData,
+//            services: advertisementData,
             rssi: RSSI.intValue
         )
 
-        if !discoveredDevices.contains(device) {
+        let checkDuplicates = discoveredDevices.contains(where: { $0.peripheral?.name == peripheral.name })
+
+        if !checkDuplicates {
             discoveredDevices.append(device)
             print("Device found \(deviceName)")
         }
@@ -186,6 +228,7 @@ extension CBServiceManager: CBCentralManagerDelegate {
     }
 }
 
+//MARK: - EXT CBPERIPHERALDELEGATE
 extension CBServiceManager: CBPeripheralDelegate {
     //MARK: - Services found
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: (any Error)?) {
@@ -253,6 +296,7 @@ extension CBServiceManager: CBPeripheralDelegate {
         handleReceivedData(data)
     }
 
+    //MARK: - Wrote value in a characteristic
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: (any Error)?) {
         if let error = error {
             print("Error writing to characteristic \(characteristic.uuid): \(error.localizedDescription)")
@@ -261,6 +305,7 @@ extension CBServiceManager: CBPeripheralDelegate {
         }
     }
 
+    //MARK: - Handle data receive from characteristic
     func handleReceivedData(_ data: Data) {
         print("Received data for handling: ")
         dump(data)

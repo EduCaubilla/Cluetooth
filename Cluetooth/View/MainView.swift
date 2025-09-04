@@ -9,8 +9,17 @@ import SwiftUI
 import SwiftData
 
 struct MainView: View {
+    //MARK: - PROPERTIES
     @Query private var devices: [Device]
 
+    @ObservedObject var viewModel: MainViewModel
+
+    //MARK: - INITIALIZER
+    init(viewModel: MainViewModel = .init()) {
+        self.viewModel = viewModel
+    }
+
+    //MARK: - BODY
     var body: some View {
         NavigationStack {
             List {
@@ -50,22 +59,40 @@ struct MainView: View {
                     .padding(.vertical, 3)
                 } //: SECTION
 
-                Section("Other Devices") {
+                Section("Devices available") {
                     HStack {
-                        Text("Checking for new devices...")
-                            .foregroundStyle(.gray)
-                        Spacer()
-                        ProgressView()
+                        if !viewModel.devicesReady && viewModel.connectionStatus == "Scanning..."  {
+                            Text("Looking for new devices...")
+                                .foregroundStyle(.gray)
+                            Spacer()
+                            ProgressView()
+                        } else {
+                            VStack(alignment: .leading) {
+                                ForEach(viewModel.foundDevices) { device in
+                                    Text(device.peripheral?.name ?? "Unknown Device")
+                                }
+                            }
+                        }
                     }
                 } //: SECTION
             } //: LIST
             .listStyle(.grouped)
             .navigationTitle(Text("Cluetooth"))
             .navigationBarTitleDisplayMode(.inline)
+
+            Button("Scan for devices") {
+                Task {
+                    await viewModel.fetchDevices()
+                }
+            }
+            .foregroundStyle(.blue)
+            .font(.system(size: 25, weight: .medium, design: .default))
+            .padding(.vertical, 15)
         } //: NAV
     } //: VIEW
 }
 
+//MARK: - PREVIEW
 #Preview {
     MainView()
 }
