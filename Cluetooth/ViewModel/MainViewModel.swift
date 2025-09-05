@@ -12,17 +12,17 @@ import CoreBluetooth
 class MainViewModel: ObservableObject {
     //MARK: - PROPERTIES
     @Environment(\.modelContext) private var modelContext
+
+    let bluetoothManager : CBServiceManager?
+
     @Published var savedDevices: [Device] = []
-
     @Published var foundDevices: [Device] = []
-
+    @Published var linkedDevice: Device?
     @Published var connectionStatus: String = "Disconnected"
 
     @Query private var devices: [Device]
 
-    let bluetoothManager : CBServiceManager?
-
-    var devicesReady: Bool { !foundDevices.isEmpty }
+    var isScanning: Bool { bluetoothManager?.isScanning ?? false }
 
     //MARK: - INITIALIZER
     init(bluetoothManager: CBServiceManager = CBServiceManager.shared) {
@@ -54,6 +54,8 @@ class MainViewModel: ObservableObject {
         // Observe discovered devices
         bluetoothManager?.$discoveredDevices
             .assign(to: &$foundDevices)
+
+        bluetoothManager?.$connectedDevice.assign(to: &$linkedDevice)
     }
 
     func fetchDevices() async {
@@ -78,13 +80,35 @@ class MainViewModel: ObservableObject {
 //        print("Devices ready: \(foundDevices.count)")
 //    }
 
+    func connectDevice(_ device: Device) {
+        if linkedDevice != nil {
+            bluetoothManager?.disconnect(from: linkedDevice!)
+        }
+
+        print("Connect Device: \(device.name)")
+        bluetoothManager?.connect(to: device)
+
+        let connectedDevice = foundDevices.first(where: { $0.uid == device.uid })
+        connectedDevice?.connected = true
+
+        foundDevices = foundDevices.sorted { $0.connected && !$1.connected }
+
+        linkedDevice = device
+    }
+
+    func removeFoundDevice(_ device: Device) {
+        print("Remove Device: \(device.name)")
+        foundDevices.remove(at: foundDevices.firstIndex(of: device)!)
+    }
+
     //MARK: - SWIFT DATA
-    private func addItem(peripheral: CBPeripheral, name: String, uid: String, services: [String: Any], rssi: Int) {
+    private func addItem(uid: String, peripheral: CBPeripheral, name: String, services: [String: String], rssi: Int) {
         withAnimation {
             let newDevice = Device(
+                uid: uid,
                 peripheral: peripheral,
                 name: name,
-//                services: services,
+                services: services,
                 rssi: rssi
             )
             modelContext.insert(newDevice)

@@ -24,7 +24,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
     private var targetServiceUUIDs: [CBUUID] = []
     private var characteristics: [CBUUID: CBCharacteristic] = [:]
 
-    private let scanTimeout: TimeInterval = 2.0
+    private let scanTimeout: TimeInterval = 10.0
     private var scanTimer: Timer?
 
     var onScanFinished: (([Device]) -> Void)?
@@ -98,7 +98,6 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         }
         centralManager.connect(connectPeripheral, options: nil)
 
-        connectedDevice = device
         print("Trying to connect to \(device.name)...")
     }
 
@@ -152,45 +151,54 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
 //MARK: - EXT CBCENTRALMANAGERDELEGATE
 extension CBServiceManager: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        switch central.state {
-            case .unknown:
-                state = .unknown
-            case .resetting:
-                state = .resetting
-            case .unsupported:
-                state = .unsupported
-            case .unauthorized:
-                state = .unauthorized
-            case .poweredOff:
-                state = .poweredOff
-            case .poweredOn:
-                state = .poweredOn
-            @unknown default:
-                state = .unknown
+        DispatchQueue.main.async {
+            switch central.state {
+                case .unknown:
+                    self.state = .unknown
+                case .resetting:
+                    self.state = .resetting
+                case .unsupported:
+                    self.state = .unsupported
+                case .unauthorized:
+                    self.state = .unauthorized
+                case .poweredOff:
+                    self.state = .poweredOff
+                case .poweredOn:
+                    self.state = .poweredOn
+                @unknown default:
+                    self.state = .unknown
+            }
         }
         print("Central Manager State changed to: \(central.state.rawValue) -> \(state)")
     }
 
-    //MARK: - Discover Devices
+    //MARK: - Discover Device
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         let deviceName = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown Peripheral"
+
+        let isConnected = peripheral.state == .connected
+        print("Discovered \(deviceName) - \(isConnected ? "Connected" : "Disconnected")")
 
         if deviceName.isEmpty || deviceName == "Unknown Peripheral" {
             return
         }
 
         let device = Device(
+            uid: peripheral.identifier.uuidString,
             peripheral: peripheral,
             name: peripheral.name ?? "Unknown Peripheral",
-//            services: advertisementData,
+            services: advertisementData.mapValues{ "\($0)" },
             rssi: RSSI.intValue
         )
 
-        let checkDuplicates = discoveredDevices.contains(where: { $0.peripheral?.name == peripheral.name })
+        let checkDuplicates = discoveredDevices.contains(where: { $0.peripheral?.name == peripheral.name && $0.uid.uuidString == peripheral.identifier.uuidString })
 
         if !checkDuplicates {
             discoveredDevices.append(device)
             print("Device found \(deviceName)")
+            print("Peripheral Data:")
+            dump(peripheral)
+            dump(device.services)
         }
     }
 
@@ -233,7 +241,7 @@ extension CBServiceManager: CBPeripheralDelegate {
     //MARK: - Services found
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: (any Error)?) {
         guard error == nil else {
-            print("Error disconvering services: \(error!.localizedDescription)")
+            print("Error discovering services: \(error!.localizedDescription)")
             state = .error(error!.localizedDescription)
             return
         }
@@ -291,9 +299,10 @@ extension CBServiceManager: CBPeripheralDelegate {
             return
         }
         
-        print("Received data for \(characteristic.uuid): \(String(decoding: data, as: Unicode.UTF8.self))")
+        print("Received data for \(characteristic.uuid): ")
+        print(data as NSData)
 
-        handleReceivedData(data)
+//        handleReceivedData(data)
     }
 
     //MARK: - Wrote value in a characteristic

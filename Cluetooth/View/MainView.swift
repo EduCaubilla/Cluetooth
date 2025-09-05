@@ -24,14 +24,8 @@ struct MainView: View {
         NavigationStack {
             List {
                 Section(header: Text("My Devices")) {
-    //                ForEach(devices) { device in
-    //                    NavigationLink {
-    //                        Text("\(device.name)")
-    //                    } label: {
-    //                        Text(device.name)
-    //                    }
-    //                }
-    //                .onDelete(perform: deleteItems)
+                    // TODO - List of already connected devices from local db
+                    // Example cell
                     HStack {
                         Text("Device 1")
 
@@ -39,38 +33,84 @@ struct MainView: View {
 
                         Button("Connect") {
 
-                        }
+                        } //: BUTTON
                         .foregroundStyle(.gray)
                         .padding(.horizontal)
                         .padding(.vertical, 5)
-                        .background(.gray.opacity(0.2))
+                        .background(.gray.opacity(0.15))
                         .clipShape(
                             Capsule()
                         )
 
                         Menu {
-                            NavigationLink("Go to Detail") {
+                            NavigationLink("Info") {
                                 DetailView()
+                            }
+                            Button("Remove") {
+                                print("Remove device")
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
-                        }
-                    }
+                        } //: MENU
+                    } //: HSTACK
                     .padding(.vertical, 3)
                 } //: SECTION
 
                 Section("Devices available") {
-                    HStack {
-                        if !viewModel.devicesReady && viewModel.connectionStatus == "Scanning..."  {
-                            Text("Looking for new devices...")
-                                .foregroundStyle(.gray)
-                            Spacer()
-                            ProgressView()
-                        } else {
-                            VStack(alignment: .leading) {
-                                ForEach(viewModel.foundDevices) { device in
-                                    Text(device.peripheral?.name ?? "Unknown Device")
-                                }
+                    if viewModel.foundDevices.isEmpty {
+                        Text("No devices found")
+                            .foregroundStyle(.gray)
+                    } else {
+                        HStack {
+                            if viewModel.connectionStatus == "Scanning..."  {
+                                Text("Looking for new devices...")
+                                    .foregroundStyle(.gray)
+                                Spacer()
+                                ProgressView()
+                            } else {
+                                VStack(alignment: .leading) {
+                                    ForEach(viewModel.foundDevices, id: \.id) { device in
+                                        HStack {
+                                            Text(device.peripheral?.name ?? "Unknown Device")
+                                                .font(.system(size: 18, weight: .regular, design: .default))
+
+                                            Spacer()
+
+                                            if device.connected {
+                                                Text("Connected")
+                                                    .foregroundStyle(.green)
+                                                    .padding(.horizontal)
+                                                    .padding(.vertical, 5)
+                                            } else {
+                                                Button("Connect") {
+                                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                                        viewModel.connectDevice(device)
+                                                    }
+                                                }
+                                                .buttonStyle(.borderless)
+                                                .foregroundStyle(.gray)
+                                                .padding(.horizontal)
+                                                .padding(.vertical, 5)
+                                                .background(.gray.opacity(0.15))
+                                                .clipShape(
+                                                    Capsule()
+                                                )
+                                            }
+
+                                            Menu {
+                                                NavigationLink("Info") {
+                                                    DetailView()
+                                                }
+                                                Button("Remove") {
+                                                    print("Remove device")
+                                                    viewModel.removeFoundDevice(device)
+                                                }
+                                            } label: {
+                                                Image(systemName: "ellipsis.circle")
+                                            } // MENU
+                                        } //: HSTACK
+                                    } //: FOR LOOP
+                                } //: VSTACK
                             }
                         }
                     }
@@ -84,7 +124,7 @@ struct MainView: View {
                 Task {
                     await viewModel.fetchDevices()
                 }
-            }
+            } //: BUTTON
             .foregroundStyle(.blue)
             .font(.system(size: 25, weight: .medium, design: .default))
             .padding(.vertical, 15)
