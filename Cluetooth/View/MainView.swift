@@ -23,109 +23,135 @@ struct MainView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section(header: Text("My Devices")) {
+                if(viewModel.savedDevices.isEmpty) {
+                    EmptyView()
+                } else {
+                    Section(header: Text("My Devices")) {
                     // TODO - List of already connected devices from local db
                     // Example cell
-                    HStack {
-                        Text("Device 1")
+                        HStack {
+                            Text("Device 1")
 
-                        Spacer()
+                            Spacer()
 
-                        Button("Connect") {
+                            Button("Connect") {
 
-                        } //: BUTTON
-                        .foregroundStyle(.gray)
-                        .padding(.horizontal)
-                        .padding(.vertical, 5)
-                        .background(.gray.opacity(0.15))
-                        .clipShape(
-                            Capsule()
-                        )
+                            } //: BUTTON
+                            .foregroundStyle(.gray)
+                            .padding(.horizontal)
+                            .padding(.vertical, 5)
+                            .background(.gray.opacity(0.15))
+                            .clipShape(
+                                Capsule()
+                            )
 
-                        Menu {
-                            NavigationLink("Info") {
-                                DetailView()
-                            }
-                            Button("Remove") {
-                                print("Remove device")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        } //: MENU
-                    } //: HSTACK
-                    .padding(.vertical, 3)
-                } //: SECTION
+                            Menu {
+                                NavigationLink("Info") {
+                                    DetailView()
+                                }
+                                Button("Remove") {
+                                    print("Remove device")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                            } //: MENU
+                        } //: HSTACK
+                        .padding(.vertical, 3)
+                    } //: SECTION
+                }
 
-                Section("Devices available") {
+                Section {
                     if viewModel.foundDevices.isEmpty {
-                        Text("No devices found")
+                        Text("No devices")
                             .foregroundStyle(.gray)
                     } else {
                         HStack {
-                            if viewModel.connectionStatus == "Scanning..."  {
-                                Text("Looking for new devices...")
-                                    .foregroundStyle(.gray)
-                                Spacer()
-                                ProgressView()
-                            } else {
-                                VStack(alignment: .leading) {
-                                    ForEach(viewModel.foundDevices, id: \.id) { device in
-                                        HStack {
-                                            Text(device.peripheral?.name ?? "Unknown Device")
+                            VStack(alignment: .leading) {
+                                ForEach(viewModel.foundDevices, id: \.id) { device in
+                                    HStack {
+                                        Text(String(device.rssi))
+                                            .font(.system(size: 16, weight: .regular, design: .default))
+                                            .foregroundStyle(device.signalStrengthColor)
+                                            .padding(.trailing, 3)
+
+                                        Text(device.peripheral?.name ?? "Unknown Device")
+                                            .font(.system(size: 18, weight: .regular, design: .default))
+
+                                        Spacer()
+
+                                        if device.connected {
+                                            Text("Connected")
                                                 .font(.system(size: 18, weight: .regular, design: .default))
-
-                                            Spacer()
-
-                                            if device.connected {
-                                                Text("Connected")
-                                                    .foregroundStyle(.green)
-                                                    .padding(.horizontal)
-                                                    .padding(.vertical, 5)
-                                            } else {
-                                                Button("Connect") {
-                                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                                        viewModel.connectDevice(device)
-                                                    }
+                                                .foregroundStyle(.green)
+                                                .padding(.vertical, 3)
+                                        } else {
+                                            Button("Connect") {
+                                                withAnimation(.easeInOut(duration: 0.3)) {
+                                                    viewModel.connectDevice(device)
                                                 }
-                                                .buttonStyle(.borderless)
-                                                .foregroundStyle(.gray)
-                                                .padding(.horizontal)
-                                                .padding(.vertical, 5)
-                                                .background(.gray.opacity(0.15))
-                                                .clipShape(
-                                                    Capsule()
-                                                )
                                             }
+                                            .font(.system(size: 18, weight: .regular, design: .default))
+                                            .buttonStyle(.borderless)
+                                            .foregroundStyle(.gray)
+                                            .padding(.vertical, 3)
+                                            .background(.gray.opacity(0.05))
+                                            .clipShape(
+                                                Capsule()
+                                            )
+                                        }
 
-                                            Menu {
-                                                NavigationLink("Info") {
-                                                    DetailView()
+                                        Image(systemName: device.expanded ? "chevron.down" : "chevron.right")
+                                            .onTapGesture {
+                                                device.expanded = !device.expanded
+                                            }
+                                    } //: HSTACK
+
+                                    if device.expanded {
+                                        VStack(alignment: .leading) {
+                                            Text("\(device.name)")
+                                                .font(.system(size: 14, weight: .medium, design: .default))
+//
+                                            ForEach(Array(device.services.keys.sorted()), id: \.self) { serviceKey in
+                                                HStack{
+                                                    Text("\(serviceKey)")
+                                                        .font(.system(size: 14, weight: .regular, design: .default))
+                                                    Spacer()
+                                                    Text("\(device.services[serviceKey] ?? "No value")")
+                                                      .font(.system(size: 14, weight: .regular, design: .default))
                                                 }
-                                                Button("Remove") {
-                                                    print("Remove device")
-                                                    viewModel.removeFoundDevice(device)
-                                                }
-                                            } label: {
-                                                Image(systemName: "ellipsis.circle")
-                                            } // MENU
-                                        } //: HSTACK
-                                    } //: FOR LOOP
-                                } //: VSTACK
-                            }
+                                            } //: FOR LOOP - Services
+                                        } //: VSTACK
+                                    }
+                                } //: FOR LOOP - Devices
+                            } //: VSTACK
                         }
                     }
+                } header: {
+                    HStack {
+                        Text("Devices")
+
+                        if viewModel.isScanning {
+                            ProgressView()
+                                .padding(.leading, 5)
+                        }
+                    }
+                } footer: {
+                    EmptyView()
                 } //: SECTION
             } //: LIST
             .listStyle(.grouped)
             .navigationTitle(Text("Cluetooth"))
             .navigationBarTitleDisplayMode(.inline)
+            .padding(.top, -15)
 
             Button("Scan for devices") {
                 Task {
-                    await viewModel.fetchDevices()
+                    if !viewModel.isScanning {
+                        await viewModel.fetchDevices()
+                    }
                 }
             } //: BUTTON
-            .foregroundStyle(.blue)
+            .foregroundStyle(viewModel.isScanning ? .blue.opacity(0.5) : .blue)
             .font(.system(size: 25, weight: .medium, design: .default))
             .padding(.vertical, 15)
         } //: NAV

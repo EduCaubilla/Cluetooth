@@ -5,7 +5,7 @@
 //  Created by Edu Caubilla on 2/9/25.
 //
 
-import Foundation
+import SwiftUI
 import SwiftData
 import CoreBluetooth
 
@@ -18,8 +18,17 @@ final class Device: Equatable, Identifiable {
     var rssi: Int
     var connected: Bool
     var timestamp: Date?
+    var expanded: Bool = false
 
     var id: String { uid.uuidString }
+    var signalStrengthColor: Color {
+        switch rssi {
+            case -50...0: return .green
+            case -70..<(-50): return .yellow
+            case -85..<(-70): return .orange
+            default: return .red
+        }
+    }
 
     init(
         uid: String,

@@ -24,10 +24,8 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
     private var targetServiceUUIDs: [CBUUID] = []
     private var characteristics: [CBUUID: CBCharacteristic] = [:]
 
-    private let scanTimeout: TimeInterval = 10.0
+    private let scanTimeout: TimeInterval = 30.0
     private var scanTimer: Timer?
-
-    var onScanFinished: (([Device]) -> Void)?
 
     //MARK: - INITIALIZER
     override init() {
@@ -49,20 +47,26 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
 
          guard centralManager.state == .poweredOn else {
             state = .poweredOff
-             onScanFinished?([])
             return
         }
 
         targetServiceUUIDs = serviceUUIDs ?? []
-        isScanning = true
+
+        DispatchQueue.main.async{
+            self.isScanning = true
+        }
+
+        let options: [String: Any] = [
+            CBCentralManagerScanOptionAllowDuplicatesKey: false,
+            CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+            CBConnectPeripheralOptionNotifyOnDisconnectionKey: true
+        ]
+
         centralManager.scanForPeripherals(
             withServices: targetServiceUUIDs,
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+            options: options
         )
 
-//        scanTimer = Timer.scheduledTimer(withTimeInterval: scanTimeout, repeats: false, block: { _ in
-//            self.stopScanning()
-//        })
         DispatchQueue.main.asyncAfter(deadline: .now() + scanTimeout) { [weak self] in
             self?.stopScanning()
         }
@@ -80,8 +84,6 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         if state == .connecting {
             state = .poweredOn
         }
-
-        onScanFinished?(discoveredDevices)
 
         print("Stopped scanning.")
     }
@@ -196,9 +198,11 @@ extension CBServiceManager: CBCentralManagerDelegate {
         if !checkDuplicates {
             discoveredDevices.append(device)
             print("Device found \(deviceName)")
+            print("With RSSI: \(RSSI.intValue)")
             print("Peripheral Data:")
             dump(peripheral)
             dump(device.services)
+            dump(advertisementData)
         }
     }
 

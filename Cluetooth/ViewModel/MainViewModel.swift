@@ -19,10 +19,9 @@ class MainViewModel: ObservableObject {
     @Published var foundDevices: [Device] = []
     @Published var linkedDevice: Device?
     @Published var connectionStatus: String = "Disconnected"
+    @Published var isScanning: Bool = false
 
     @Query private var devices: [Device]
-
-    var isScanning: Bool { bluetoothManager?.isScanning ?? false }
 
     //MARK: - INITIALIZER
     init(bluetoothManager: CBServiceManager = CBServiceManager.shared) {
@@ -55,7 +54,11 @@ class MainViewModel: ObservableObject {
         bluetoothManager?.$discoveredDevices
             .assign(to: &$foundDevices)
 
+        // Observe connected devices
         bluetoothManager?.$connectedDevice.assign(to: &$linkedDevice)
+
+        // Observe scanning state
+        bluetoothManager?.$isScanning.assign(to: &$isScanning)
     }
 
     func fetchDevices() async {
@@ -69,6 +72,7 @@ class MainViewModel: ObservableObject {
 //            bluetoothManager.startScanning()
 //        }
 //        await setFoundDevices(discoveredDevices)
+
         bluetoothManager?.startScanning()
     }
 
