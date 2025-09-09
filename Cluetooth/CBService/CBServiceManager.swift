@@ -189,7 +189,7 @@ extension CBServiceManager: CBCentralManagerDelegate {
             uid: peripheral.identifier.uuidString,
             peripheral: peripheral,
             name: peripheral.name ?? "Unknown Peripheral",
-            services: advertisementData.mapValues{ "\($0)" },
+            services: Device.advDataConverter(advertisementData),
             rssi: RSSI.intValue
         )
 

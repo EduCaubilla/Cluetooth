@@ -108,19 +108,18 @@ struct MainView: View {
 
                                     if device.expanded {
                                         VStack(alignment: .leading) {
-                                            Text("\(device.name)")
-                                                .font(.system(size: 14, weight: .medium, design: .default))
-//
                                             ForEach(Array(device.services.keys.sorted()), id: \.self) { serviceKey in
                                                 HStack{
                                                     Text("\(serviceKey)")
-                                                        .font(.system(size: 14, weight: .regular, design: .default))
+                                                        .font(.system(size: 15, weight: .regular, design: .default))
                                                     Spacer()
                                                     Text("\(device.services[serviceKey] ?? "No value")")
-                                                      .font(.system(size: 14, weight: .regular, design: .default))
+                                                      .font(.system(size: 15, weight: .regular, design: .default))
                                                 }
+                                                .padding(.bottom, 3)
                                             } //: FOR LOOP - Services
                                         } //: VSTACK
+                                        .padding(.leading, 5)
                                     }
                                 } //: FOR LOOP - Devices
                             } //: VSTACK
