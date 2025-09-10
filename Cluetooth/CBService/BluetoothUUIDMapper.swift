@@ -85,36 +85,38 @@ struct BluetoothUUIDMapper {
 
         // Custom/Proprietary Services (16-bit)
         "FE00": "Continuous Glucose Monitoring",
-        "FE01": "Dexcom",
-        "FE02": "Dexcom",
-        "FE59": "Nordic Semiconductor ASA",
-        "FE5A": "Gimbal",
-        "FE5B": "Gimbal",
-        "FE5C": "Gimbal",
-        "FE5D": "Gimbal",
-        "FE5E": "Gimbal",
-        "FE5F": "Gimbal",
-        "FE84": "Huawei Technologies Co., Ltd.",
-        "FE87": "Huawei Technologies Co., Ltd.",
-        "FE8F": "Huawei Technologies Co., Ltd.",
-        "FE95": "Google",
-        "FE9F": "Google",
-        "FEA0": "Google",
-        "FEAA": "Google",
-        "FEDC": "Tile, Inc.",
-        "FEDD": "Tile, Inc.",
-        "FEDE": "Tile, Inc.",
-        "FEDF": "Tile, Inc.",
-        "FEE0": "Xiaomi Inc.",
-        "FEE1": "Xiaomi Inc.",
-        "FEE7": "Xiaomi Inc.",
-        "FEEA": "Xiaomi Inc.",
-        "FEEB": "Xiaomi Inc.",
-        "FEEC": "Xiaomi Inc.",
-        "FEED": "Xiaomi Inc.",
-        "FEEE": "Xiaomi Inc.",
-        "FEEF": "Xiaomi Inc.",
-        "FEF0": "Xiaomi Inc.",
+        "FE01": "Dexcom Service",
+        "FE02": "Dexcom Service",
+        "FE59": "Nordic Semiconductor Service",
+        "FE5A": "Gimbal Service",
+        "FE5B": "Gimbal Service",
+        "FE5C": "Gimbal Service",
+        "FE5D": "Gimbal Service",
+        "FE5E": "Gimbal Service",
+        "FE5F": "Gimbal Service",
+        "FE84": "Huawei Service",
+        "FE87": "Huawei Service",
+        "FE8F": "Huawei Service",
+        "FE95": "Google Service",
+        "FE9F": "Google Service",
+        "FEA0": "Google Service",
+        "FEAA": "Google Service",
+        "FEDC": "Tile Service",
+        "FEDD": "Tile Service",
+        "FEDE": "Tile Service",
+        "FEDF": "Tile Service",
+        "FEE0": "Xiaomi Service",
+        "FEE1": "Xiaomi Service",
+        "FEE7": "Xiaomi Service",
+        "FEEA": "Xiaomi Service",
+        "FEEB": "Xiaomi Service",
+        "FEEC": "Xiaomi Service",
+        "FEED": "Xiaomi Service",
+        "FEEE": "Xiaomi Service",
+        "FEEF": "Xiaomi Service",
+        "FEF0": "Xiaomi Service",
+
+        "FFE0": "Temperature Sensor",
 
         // 128-bit Custom Services (common ones)
         "6E400001-B5A3-F393-E0A9-E50E24DCCA9E": "Nordic UART Service",
@@ -342,13 +344,19 @@ struct BluetoothUUIDMapper {
 
     /// Get service description from UUID
     static func getServiceDescription(for uuid: CBUUID) -> String {
-        let uuidString = normalizeUUID(uuid.uuidString)
+        getServiceDescription(for: uuid.uuidString)
+    }
+
+    static func getServiceDescription(for uuidString: String) -> String {
         return serviceDescriptions[uuidString] ?? "Unknown Service (\(uuidString))"
     }
 
     /// Get characteristic description from UUID
     static func getCharacteristicDescription(for uuid: CBUUID) -> String {
-        let uuidString = normalizeUUID(uuid.uuidString)
+        return getCharacteristicDescription(for: uuid.uuidString)
+    }
+
+    static func getCharacteristicDescription(for uuidString: String) -> String {
         return characteristicDescriptions[uuidString] ?? "Unknown Characteristic (\(uuidString))"
     }
 

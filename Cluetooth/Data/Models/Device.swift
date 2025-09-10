@@ -30,13 +30,11 @@ final class Device: Equatable, Identifiable {
         }
     }
 
-    init(
-        uid: String,
+    init(uid: String,
         peripheral: CBPeripheral,
         name: String,
         services: [String: String],
-        rssi: Int
-    ) {
+        rssi: Int) {
         self.uid = UUID(uuidString: uid)!
         self.peripheral = peripheral
         self.name = name
@@ -61,15 +59,15 @@ extension Device {
         return responseData
     }
 
-//    static func serviceConverter(for data: [CBService], with key: String) {
-//        var convertedData: [String: String] = [:]
-//        
-//        for service in data {
-//            let key = getKeyDescription(for: key)
-//            let value = BluetoothUUIDMapper.getServiceDescription(for: service.uuid)
-//            convertedData[key] = value
-//        }
-//    }
+    //    static func serviceConverter(for data: [CBService], with key: String) {
+    //        var convertedData: [String: String] = [:]
+    //
+    //        for service in data {
+    //            let key = getKeyDescription(for: key)
+    //            let value = BluetoothUUIDMapper.getServiceDescription(for: service.uuid)
+    //            convertedData[key] = value
+    //        }
+    //    }
 }
 
 extension Device {
@@ -82,20 +80,20 @@ extension Device {
                 return inputValue as? String ?? "0" // Int
 
             case .CBAdvertisementDataServiceUUIDs, .CBAdvertisementDataOverflowServiceUUIDs, .CBAdvertisementDataSolicitedServiceUUIDs:
-                var response: String = ""
-                let uuidsArray = inputValue as? [CBUUID] // [UUID]
-                if let uuidsArray = uuidsArray {
-                    uuidsArray.forEach { uuid in
-                        response.append(BluetoothUUIDMapper.getServiceDescription(for: uuid))
-                    }
-                }
-                return response
+                return dataServiceUUIDsConverter(for: inputValue as? String ?? "")
 
             case .CBAdvertisementDataIsConnectable, .CBAdvertisementDataRxPrimaryPHY, .CBAdvertisementDataRxSecondaryPHY:
                 return boolToDescription(mapToBool(inputValue as? String ?? "0")) // Bool
 
             case .CBAdvertisementDataManufacturerData:
-                return String(data: inputValue as? Data ?? Data(), encoding: String.Encoding.utf8) ?? "None" //NSData
+                var response = "No data"
+                let stringHex =  utils.anyManufacturerDataToHexString(inputValue as? String ?? "")
+
+                if let dataFromHex = Data(hexString: stringHex) {
+                    response = String(describing: BluetoothManufacturerMapper().parseManufacturerData(dataFromHex))
+                }
+
+                return response
 
             case .CBAdvertisementDataTimestamp:
                 let timestamp: Double = NSString(string:"\(inputValue)").doubleValue
@@ -106,12 +104,40 @@ extension Device {
         }
     }
 
+    static func boolToDescription(_ value: Bool) -> String {
+        return value ? "Yes" : "No"
+    }
+
     static func mapToBool(_ value: String) -> Bool {
         return value == "1"
     }
 
-    static func boolToDescription(_ value: Bool) -> String {
-        return value ? "Yes" : "No"
+    static func dataServiceUUIDsConverter(for stringData: String) -> String {
+        var result : String = ""
+        var services : [String] = []
+
+        let startIndex = stringData.firstIndex(of: " ")!
+        let endIndex = stringData.lastIndex(of: ")")!
+
+        if stringData.count > 0 {
+            let stringsRaw = String(stringData[startIndex..<endIndex])
+            let stringList = stringsRaw.split(separator: ",").map(String.init)
+            stringList.forEach { string in
+                let trimmedString = string.trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleanString = trimmedString.trimmingCharacters(in: .punctuationCharacters)
+                if cleanString.count == 4 {
+                    let description = BluetoothUUIDMapper.getServiceDescription(for: cleanString)
+                    services.append(description)
+                } else {
+                    services.append(trimmedString)
+                }
+            }
+            result = services.joined(separator: ", ")
+        } else {
+            result = "None"
+        }
+
+        return result
     }
 
     static func getKeyDescription(for key: String) -> String {
@@ -123,6 +149,7 @@ extension Device {
         }
         return resultKey
     }
+
 }
 
 struct utils {
@@ -138,16 +165,30 @@ struct utils {
         return serviceUUIDS
     }
 
-//    static func uuidStringToDescription(_ uuid: String) -> String {
-//        let btMapper = BluetoothUUIDMapper()
-//        return ""
-//    }
+    //    static func uuidStringToDescription(_ uuid: String) -> String {
+    //        let btMapper = BluetoothUUIDMapper()
+    //        return ""
+    //    }
 
     static func timeStampToDate(_ timeStamp: Double) -> String {
         let date = Date(timeIntervalSinceReferenceDate: timeStamp)
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "HH:mm:ss | dd MMM yyyy"
         return dateFormatter.string(from: date)
+    }
+
+    static func anyManufacturerDataToHexString(_ data: Any) -> String {
+        let stringInputValue = data as? String ?? ""
+        let startIndex = stringInputValue.firstIndex(of: "x")
+        let endIndex = stringInputValue.lastIndex(of: "}")
+
+        let inputStringHex = String(stringInputValue[(startIndex!)..<endIndex!])
+        var cleanInput = inputStringHex.replacingOccurrences(of: " ", with: "")
+        cleanInput = cleanInput.replacingOccurrences(of: "x", with: "")
+        cleanInput = cleanInput.replacingOccurrences(of: ".", with: "")
+        let output = cleanInput.replacingOccurrences(of: "}", with: "")
+
+        return output
     }
 }
 

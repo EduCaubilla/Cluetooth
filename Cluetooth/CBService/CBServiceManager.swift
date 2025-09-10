@@ -202,7 +202,6 @@ extension CBServiceManager: CBCentralManagerDelegate {
             print("Peripheral Data:")
             dump(peripheral)
             dump(device.services)
-            dump(advertisementData)
         }
     }
 
