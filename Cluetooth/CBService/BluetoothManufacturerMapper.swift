@@ -97,7 +97,7 @@ struct BluetoothManufacturerMapper {
         }
     }
 
-    func parseManufacturerData(_ data: Data) -> ManufacturerInfo? {
+    func parseManufacturerData(_ data: Data) -> String? {
         guard data.count >= 2 else {
             print("Manufacturer data too short")
             return nil
@@ -115,17 +115,24 @@ struct BluetoothManufacturerMapper {
         print("Company ID: 0x\(String(format: "%04X", companyId))")
         print("Company: \(companyName)")
         print("Data Length: \(companyData.count) bytes")
-        print("Raw Company Data: \(companyData.hexString)")
 
         // Parse company-specific data
         let parsedData = parseCompanySpecificData(companyId: companyId, data: companyData)
 
-        return ManufacturerInfo(
-            companyId: companyId,
-            companyName: companyName,
-            rawData: companyData,
-            parsedData: parsedData
-        )
+        var manufacturerStringResponse: String = ""
+
+        var i = 0
+        parsedData.forEach { key, value in
+            if let stringValue = value as? String {
+                manufacturerStringResponse += "\(key): \(stringValue)"
+                if (i > 0 && parsedData.count > 1) || i == parsedData.count - 1 {
+                    manufacturerStringResponse += "\n"
+                }
+                i += 1
+            }
+        }
+
+        return manufacturerStringResponse
     }
 
     func parseCompanySpecificData(companyId: UInt16, data: Data) -> [String: Any] {
@@ -144,10 +151,10 @@ struct BluetoothManufacturerMapper {
                 result = parseMicrosoftData(data)
             case 0x0075:
                 result = parseSamsungData(data)
-//            case 0x0118:
-//                result = parseLGData(data)
-//            case 0x038F:
-//                result = parseXiaomiData(data)
+            case 0x0118:
+                result = parseLGData(data)
+            case 0x038F:
+                result = parseXiaomiData(data)
             default:
                 result = parseGenericData(data)
         }
@@ -156,12 +163,12 @@ struct BluetoothManufacturerMapper {
     }
 
     // MARK: - Apple Data Parser
-    func parseAppleData(_ data: Data) -> [String: Any] {
-        var result: [String: Any] = ["company": "Apple"]
+    func parseAppleData(_ data: Data) -> [String: String] {
+        var result: [String: String] = ["company": "Apple"]
         guard data.count > 0 else { return result }
 
         let type = data[0]
-        result["type"] = type
+        result["type"] = String(type)
         result["type_hex"] = String(format: "0x%02X", type)
 
         switch type {
@@ -169,9 +176,9 @@ struct BluetoothManufacturerMapper {
                 if let iBeacon = parseAppleIBeacon(data) {
                     result["beacon_type"] = "iBeacon"
                     result["uuid"] = iBeacon.uuid.uuidString
-                    result["major"] = iBeacon.major
-                    result["minor"] = iBeacon.minor
-                    result["tx_power"] = iBeacon.txPower
+                    result["major"] = String(iBeacon.major)
+                    result["minor"] = String(iBeacon.minor)
+                    result["tx_power"] = String(iBeacon.txPower)
                     result["description"] = "iBeacon UUID: \(iBeacon.uuid.uuidString), Major: \(iBeacon.major), Minor: \(iBeacon.minor)"
                 }
             case 0x05: // AirDrop
@@ -180,7 +187,9 @@ struct BluetoothManufacturerMapper {
             case 0x07, 0x08, 0x09: // AirPods/Audio
                 result["service"] = "AirPods/Audio"
                 if data.count > 1 {
-                    result["battery_info"] = parseAppleBatteryInfo(data.subdata(in: 1..<data.count))
+                    let resultData = parseAppleBatteryInfo(data.subdata(in: 1..<data.count))
+                    let resultString = ""
+                    result["battery_info"] = resultString.appending(resultData.values.joined(separator: ", "))
                 }
             case 0x0A: // Hey Siri
                 result["service"] = "Hey Siri"
@@ -191,8 +200,8 @@ struct BluetoothManufacturerMapper {
             case 0x10: // Nearby Action
                 result["service"] = "Nearby Action"
                 if data.count >= 3 {
-                    result["action_type"] = data[1]
-                    result["action_flags"] = data[2]
+                    result["action_type"] = String(data[1])
+                    result["action_flags"] = String(data[2])
                 }
             default:
                 result["service"] = "Unknown Apple Service"
@@ -220,27 +229,26 @@ struct BluetoothManufacturerMapper {
         return iBeaconData(uuid: uuid, major: major, minor: minor, txPower: txPower)
     }
 
-    func parseAppleBatteryInfo(_ data: Data) -> [String: Any] {
-        var batteryInfo: [String: Any] = [:]
+    func parseAppleBatteryInfo(_ data: Data) -> [String: String] {
+        var batteryInfo: [String: String] = [:]
 
         guard data.count >= 1 else { return batteryInfo }
 
         // This is simplified - Apple's battery format can be complex
         if data.count >= 2 {
-            batteryInfo["left_battery"] = Int(data[0])
-            batteryInfo["right_battery"] = Int(data[1])
+            batteryInfo["left_battery"] = String(Int(data[0]))
+            batteryInfo["right_battery"] = String(Int(data[1]))
         }
         if data.count >= 3 {
-            batteryInfo["case_battery"] = Int(data[2])
+            batteryInfo["case_battery"] = String(Int(data[2]))
         }
 
         return batteryInfo
     }
 
     // MARK: - Other Company Parsers
-
     func parseGoogleData(_ data: Data) -> [String: Any] {
-        var result: [String: Any] = ["company": "Google"]
+        var result: [String: Any] = [:]
 
         guard data.count > 0 else { return result }
 
@@ -267,7 +275,7 @@ struct BluetoothManufacturerMapper {
     }
 
     func parseFitbitData(_ data: Data) -> [String: Any] {
-        var result: [String: Any] = ["company": "Fitbit"]
+        var result: [String: Any] = [:]
 
         if data.count >= 1 {
             result["device_type"] = data[0]
@@ -281,7 +289,7 @@ struct BluetoothManufacturerMapper {
     }
 
     func parseNordicData(_ data: Data) -> [String: Any] {
-        var result: [String: Any] = ["company": "Nordic Semiconductor"]
+        var result: [String: Any] = [:]
 
         // Nordic devices often use standard formats or custom protocols
         if data.count >= 1 {
@@ -295,15 +303,13 @@ struct BluetoothManufacturerMapper {
     }
 
     func parseMicrosoftData(_ data: Data) -> [String: Any] {
-        var result: [String: Any] = ["company": "Microsoft"]
+        var result: [String: Any] = [:]
 
         guard data.count >= 1 else { return result }
 
         // Microsoft Surface, Xbox, or other devices
         result["device_type"] = data[0]
         if data.count > 1 {
-            result["device_info"] = data.subdata(in: 1..<data.count).hexString
-
             // Check for specific Microsoft protocols
             if data[0] == 0x01 {
                 result["service"] = "Surface/Windows Device"
@@ -316,7 +322,7 @@ struct BluetoothManufacturerMapper {
     }
 
     func parseSamsungData(_ data: Data) -> [String: Any] {
-        var result: [String: Any] = ["company": "Samsung"]
+        var result: [String: Any] = [:]
 
         if data.count >= 2 {
             result["service_type"] = data[0]
@@ -328,17 +334,13 @@ struct BluetoothManufacturerMapper {
             } else if data[0] == 0x75 {
                 result["service"] = "Galaxy Device"
             }
-
-            if data.count > 2 {
-                result["additional_data"] = data.subdata(in: 2..<data.count).hexString
-            }
         }
 
         return result
     }
 
     func parseLGData(_ data: Data) -> [String: Any] {
-        var result: [String: Any] = ["company": "LG"]
+        var result: [String: Any] = [:]
 
         guard data.count > 0 else { return result }
 
@@ -351,10 +353,11 @@ struct BluetoothManufacturerMapper {
     }
 
     func parseXiaomiData(_ data: Data) -> [String: Any] {
-        var result: [String: Any] = ["company": "Xiaomi"]
+        var result: [String: Any] = [:]
 
         if data.count >= 2 {
-
+            result["service_type"] = data[0]
+            result["frame_type"] = data[1]
         }
 
         return result
@@ -363,7 +366,6 @@ struct BluetoothManufacturerMapper {
     func parseGenericData(_ data: Data) -> [String: Any] {
         var result: [String: Any] = [:]
 
-        result["raw_hex"] = data.hexString
         result["length"] = data.count
         result["description"] = "Generic manufacturer data"
 
@@ -383,13 +385,7 @@ struct BluetoothManufacturerMapper {
 
 }
 
-struct ManufacturerInfo {
-    let companyId: UInt16
-    let companyName: String
-    let rawData: Data
-    let parsedData: [String: Any]
-}
-
+// MARK: Models for conversion
 struct AppleData {
     let type: UInt8
     let length: UInt8
@@ -415,7 +411,6 @@ struct iBeaconData {
 }
 
 // MARK: - Utility Extensions
-
 extension Data {
     var hexString: String {
         return map { String(format: "%02x", $0) }.joined(separator: " ")

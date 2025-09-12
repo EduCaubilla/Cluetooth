@@ -14,6 +14,8 @@ struct MainView: View {
 
     @ObservedObject var viewModel: MainViewModel
 
+    @State private var isConnectButtonPressed: Bool = false
+
     //MARK: - INITIALIZER
     init(viewModel: MainViewModel = .init()) {
         self.viewModel = viewModel
@@ -73,28 +75,43 @@ struct MainView: View {
                                             .font(.system(size: 16, weight: .regular, design: .default))
                                             .foregroundStyle(device.signalStrengthColor)
                                             .padding(.trailing, 3)
+                                            .padding(.vertical, 5)
 
                                         Text(device.peripheral?.name ?? "Unknown Device")
                                             .font(.system(size: 18, weight: .regular, design: .default))
 
                                         Spacer()
 
-                                        if device.connected {
+                                        if device.connecting {
+                                            Text("Connecting")
+                                                .font(.system(size: 17, weight: .regular, design: .default))
+                                                .foregroundStyle(.orange)
+                                                .padding(.vertical, 3)
+
+                                            ProgressView()
+                                                .padding(.horizontal, 2)
+
+                                        } else if device.connected {
                                             Text("Connected")
-                                                .font(.system(size: 18, weight: .regular, design: .default))
+                                                .font(.system(size: 17, weight: .regular, design: .default))
                                                 .foregroundStyle(.green)
                                                 .padding(.vertical, 3)
+                                                .padding(.trailing, 5)
+
                                         } else {
                                             Button("Connect") {
                                                 withAnimation(.easeInOut(duration: 0.3)) {
                                                     viewModel.connectDevice(device)
+                                                    isConnectButtonPressed = true
                                                 }
+
                                             }
+                                            .padding(.vertical, 3)
+                                            .padding(.horizontal)
                                             .font(.system(size: 18, weight: .regular, design: .default))
                                             .buttonStyle(.borderless)
                                             .foregroundStyle(.gray)
-                                            .padding(.vertical, 3)
-                                            .background(.gray.opacity(0.05))
+                                            .background(isConnectButtonPressed ? .gray.opacity(0.1) : .gray.opacity(0.12))
                                             .clipShape(
                                                 Capsule()
                                             )
@@ -108,12 +125,12 @@ struct MainView: View {
 
                                     if device.expanded {
                                         VStack(alignment: .leading) {
-                                            ForEach(Array(device.services.keys.sorted()), id: \.self) { serviceKey in
+                                            ForEach(Array(device.advertisementData.keys.sorted()), id: \.self) { serviceKey in
                                                 HStack{
                                                     Text("\(serviceKey)")
                                                         .font(.system(size: 15, weight: .regular, design: .default))
                                                     Spacer()
-                                                    Text("\(device.services[serviceKey] ?? "No value")")
+                                                    Text("\(device.advertisementData[serviceKey] ?? "No value")")
                                                       .font(.system(size: 15, weight: .regular, design: .default))
                                                 }
                                                 .padding(.bottom, 3)
@@ -123,7 +140,7 @@ struct MainView: View {
                                     }
                                 } //: FOR LOOP - Devices
                             } //: VSTACK
-                        }
+                        } //: HSTACK - Main
                     }
                 } header: {
                     HStack {

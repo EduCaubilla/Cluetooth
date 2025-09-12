@@ -89,13 +89,15 @@ class MainViewModel: ObservableObject {
             bluetoothManager?.disconnect(from: linkedDevice!)
         }
 
-        print("Connect Device: \(device.name)")
+        print("Connecting Device: \(device.name)")
         bluetoothManager?.connect(to: device)
 
-        let connectedDevice = foundDevices.first(where: { $0.uid == device.uid })
-        connectedDevice?.connected = true
+        _ = foundDevices.map { $0.connected = false }
 
-        foundDevices = foundDevices.sorted { $0.connected && !$1.connected }
+        let connectedDevice = foundDevices.first(where: { $0.uid == device.uid })
+        connectedDevice?.connecting = true
+
+        foundDevices = foundDevices.sorted { $0.connecting && !$1.connecting }
 
         linkedDevice = device
     }
@@ -106,12 +108,13 @@ class MainViewModel: ObservableObject {
     }
 
     //MARK: - SWIFT DATA
-    private func addItem(uid: String, peripheral: CBPeripheral, name: String, services: [String: String], rssi: Int) {
+    private func addItem(uid: String, peripheral: CBPeripheral, name: String, advertisementData: [String: String], services: [CBService], rssi: Int) {
         withAnimation {
             let newDevice = Device(
                 uid: uid,
                 peripheral: peripheral,
                 name: name,
+                advertisementData: advertisementData,
                 services: services,
                 rssi: rssi
             )

@@ -14,11 +14,14 @@ final class Device: Equatable, Identifiable {
     @Attribute(.unique) var uid: UUID
     @Transient var peripheral: CBPeripheral? = nil
     var name: String
-    @Relationship(deleteRule: .cascade) var services : [String: String]
+    var advertisementData : [String: String]
+    @Transient var services : [CBService] = []
+    @Transient var characteristics : [CBCharacteristic] = []
     var rssi: Int
     var connected: Bool
+    @Transient var connecting: Bool = false
     var timestamp: Date?
-    var expanded: Bool = false
+    @Transient var expanded: Bool = false
 
     var id: String { uid.uuidString }
     var signalStrengthColor: Color {
@@ -33,15 +36,32 @@ final class Device: Equatable, Identifiable {
     init(uid: String,
         peripheral: CBPeripheral,
         name: String,
-        services: [String: String],
+        advertisementData: [String: String],
+        services: [CBService],
         rssi: Int) {
         self.uid = UUID(uuidString: uid)!
         self.peripheral = peripheral
         self.name = name
+        self.advertisementData = advertisementData
         self.services = services
         self.rssi = rssi
         self.connected = false
+        self.connecting = false
         self.timestamp = timestamp ?? Date.now
+    }
+
+    init(peripheral: CBPeripheral,
+         advertisementData: [String: Any],
+         services: [CBService],
+         connected: Bool = false) {
+        self.uid = UUID(uuidString: peripheral.identifier.uuidString)!
+        self.peripheral = peripheral
+        self.name = peripheral.name ?? "Unknown"
+        self.advertisementData = Device.advDataConverter(advertisementData)
+        self.services = services
+        self.rssi = 0
+        self.connected = connected
+        self.connecting = false
     }
 }
 
@@ -52,26 +72,27 @@ extension Device {
         advData.forEach{ key, value in
             let responseKey = ServiceAdvertisementDataKey.getDescription(for: key)
             let enumKeyValue = ServiceAdvertisementDataKey.setCase(for: key)
-            let responseValue = getServiceValueMapped(for: enumKeyValue ?? nil, with: "\(value)")
+            let responseValue = getAdvertisementValueMapped(for: enumKeyValue ?? nil, with: "\(value)")
             responseData[responseKey ?? ""] = responseValue
         }
 
         return responseData
     }
 
-    //    static func serviceConverter(for data: [CBService], with key: String) {
-    //        var convertedData: [String: String] = [:]
-    //
-    //        for service in data {
-    //            let key = getKeyDescription(for: key)
-    //            let value = BluetoothUUIDMapper.getServiceDescription(for: service.uuid)
-    //            convertedData[key] = value
-    //        }
-    //    }
+    static func serviceConverter(for data: [CBService]) -> [String: String] {
+            var convertedData: [String: String] = [:]
+    
+            for service in data {
+                let key = ""
+                let value = BluetoothUUIDMapper.getServiceDescription(for: service.uuid)
+                convertedData[key] = value
+            }
+            return convertedData
+        }
 }
 
 extension Device {
-    static func getServiceValueMapped(for adv:ServiceAdvertisementDataKey?, with inputValue: Any) -> String {
+    static func getAdvertisementValueMapped(for adv:ServiceAdvertisementDataKey?, with inputValue: Any) -> String {
         switch adv {
             case .CBAdvertisementDataLocalNameKey, .CBAdvertisementDataServiceData:
                 return inputValue as? String ?? "Unkown" // String
@@ -90,7 +111,7 @@ extension Device {
                 let stringHex =  utils.anyManufacturerDataToHexString(inputValue as? String ?? "")
 
                 if let dataFromHex = Data(hexString: stringHex) {
-                    response = String(describing: BluetoothManufacturerMapper().parseManufacturerData(dataFromHex))
+                    response = BluetoothManufacturerMapper().parseManufacturerData(dataFromHex)!
                 }
 
                 return response
@@ -188,6 +209,7 @@ struct utils {
         cleanInput = cleanInput.replacingOccurrences(of: ".", with: "")
         let output = cleanInput.replacingOccurrences(of: "}", with: "")
 
+        print(output)
         return output
     }
 }

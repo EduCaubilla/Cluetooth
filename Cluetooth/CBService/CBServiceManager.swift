@@ -100,6 +100,8 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         }
         centralManager.connect(connectPeripheral, options: nil)
 
+        setConnectingDevice(connectPeripheral)
+
         print("Trying to connect to \(device.name)...")
     }
 
@@ -178,9 +180,6 @@ extension CBServiceManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         let deviceName = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown Peripheral"
 
-        let isConnected = peripheral.state == .connected
-        print("Discovered \(deviceName) - \(isConnected ? "Connected" : "Disconnected")")
-
         if deviceName.isEmpty || deviceName == "Unknown Peripheral" {
             return
         }
@@ -189,7 +188,8 @@ extension CBServiceManager: CBCentralManagerDelegate {
             uid: peripheral.identifier.uuidString,
             peripheral: peripheral,
             name: peripheral.name ?? "Unknown Peripheral",
-            services: Device.advDataConverter(advertisementData),
+            advertisementData: Device.advDataConverter(advertisementData),
+            services: [],
             rssi: RSSI.intValue
         )
 
@@ -218,6 +218,8 @@ extension CBServiceManager: CBCentralManagerDelegate {
         } else {
             peripheral.discoverServices(targetServiceUUIDs)
         }
+
+        setConnectingDevice(peripheral)
     }
 
     //MARK: - Failed connection
@@ -236,6 +238,7 @@ extension CBServiceManager: CBCentralManagerDelegate {
         }
 
         resetConnection()
+        removeConnectedDevice(peripheral)
     }
 }
 
@@ -254,9 +257,12 @@ extension CBServiceManager: CBPeripheralDelegate {
             state = .error("Peripheral services array is nil")
             return
         }
-        
+
         print("Discovered services: ")
         dump(services)
+
+        setConnectedDevice(peripheral)
+        setDeviceServices(peripheral)
 
         for service in services {
             print("Discovering characteristics for service \(service.uuid)")
@@ -277,7 +283,6 @@ extension CBServiceManager: CBPeripheralDelegate {
         }
         
         print("Discovered characteristics for service \(service.uuid): ")
-        dump(characteristics)
 
         for characteristic in characteristics {
             self.characteristics[characteristic.uuid] = characteristic
@@ -287,7 +292,14 @@ extension CBServiceManager: CBPeripheralDelegate {
                 peripheral.setNotifyValue(true, for: characteristic)
                 print("Subscribed to notifications for \(characteristic.uuid)")
             }
+
+            if characteristic.properties.contains(.read) {
+                peripheral.readValue(for: characteristic)
+                print("Read value for \(characteristic.uuid)")
+            }
         }
+
+        setCharacteristicsForService(peripheral, service)
     }
 
     //MARK: - Updated characteristic for a service
@@ -305,7 +317,7 @@ extension CBServiceManager: CBPeripheralDelegate {
         print("Received data for \(characteristic.uuid): ")
         print(data as NSData)
 
-//        handleReceivedData(data)
+        handleReceivedData(data, peripheral, characteristic)
     }
 
     //MARK: - Wrote value in a characteristic
@@ -318,9 +330,56 @@ extension CBServiceManager: CBPeripheralDelegate {
     }
 
     //MARK: - Handle data receive from characteristic
-    func handleReceivedData(_ data: Data) {
-        print("Received data for handling: ")
-        dump(data)
+    func handleReceivedData(_ data: Data, _ peripheral: CBPeripheral, _ characteristic: CBCharacteristic) {
+        print("Received data for handling from \(peripheral.identifier.uuidString) for \(characteristic.uuid): ")
+//        dump(data)
+
+        // Save data into peripheral's characteristic
+
+    }
+}
+
+extension CBServiceManager {
+    func setConnectingDevice(_ peripheral: CBPeripheral) {
+        let connectingDevice = discoveredDevices.first(where: {$0.uid == peripheral.identifier})
+        if let connectingDevice = connectingDevice {
+            connectingDevice.connecting = true
+            connectingDevice.connected = false
+        }
+    }
+
+    func setConnectedDevice(_ peripheral: CBPeripheral) {
+        connectedDevice = discoveredDevices.first(where: {$0.uid == peripheral.identifier})
+        if let connectedDevice = connectedDevice {
+            connectedDevice.connecting = false
+            connectedDevice.connected = true
+        }
+    }
+
+    func removeConnectedDevice(_ peripheral: CBPeripheral) {
+        connectedDevice = discoveredDevices.first(where: {$0.uid == peripheral.identifier})
+        if let connectedDevice = connectedDevice {
+            connectedDevice.connecting = false
+            connectedDevice.connected = false
+        }
+        connectedDevice = nil
+        connectedPeripheral = nil
+    }
+
+    func setDeviceServices(_ peripheral: CBPeripheral) {
+        if let foundServicesForDevice = peripheral.services {
+            connectedDevice?.services = foundServicesForDevice
+        }
+    }
+
+    func setCharacteristicsForService(_ peripheral: CBPeripheral, _ service: CBService) {
+        if let connectedServices = connectedDevice?.services {
+            for var connectedService in connectedServices {
+                if connectedService.uuid == service.uuid {
+                    connectedService = service
+                }
+            }
+        }
     }
 }
 
