@@ -18,7 +18,7 @@ final class Device: Equatable, Identifiable {
     @Transient var services : [CBService] = []
     @Transient var characteristics : [CBCharacteristic] = []
     var rssi: Int
-    var connected: Bool
+    @Transient var connected: Bool = false
     @Transient var connecting: Bool = false
     var timestamp: Date?
     @Transient var expanded: Bool = false
@@ -32,6 +32,8 @@ final class Device: Equatable, Identifiable {
             default: return .red
         }
     }
+    var servicesData : [DMService] { services.map { DMService(service: $0) }
+}
 
     init(uid: String,
         peripheral: CBPeripheral,
@@ -45,8 +47,6 @@ final class Device: Equatable, Identifiable {
         self.advertisementData = advertisementData
         self.services = services
         self.rssi = rssi
-        self.connected = false
-        self.connecting = false
         self.timestamp = timestamp ?? Date.now
     }
 
@@ -61,34 +61,68 @@ final class Device: Equatable, Identifiable {
         self.services = services
         self.rssi = 0
         self.connected = connected
-        self.connecting = false
     }
 }
 
 extension Device {
     static func advDataConverter(_ advData: [String : Any]) -> [String: String] {
-        var responseData : [String: String] = [:]
+        var convertedAdvs : [String: String] = [:]
 
         advData.forEach{ key, value in
             let responseKey = ServiceAdvertisementDataKey.getDescription(for: key)
             let enumKeyValue = ServiceAdvertisementDataKey.setCase(for: key)
             let responseValue = getAdvertisementValueMapped(for: enumKeyValue ?? nil, with: "\(value)")
-            responseData[responseKey ?? ""] = responseValue
+            convertedAdvs[responseKey ?? ""] = responseValue
         }
 
-        return responseData
+        return convertedAdvs
     }
 
     static func serviceConverter(for data: [CBService]) -> [String: String] {
-            var convertedData: [String: String] = [:]
-    
-            for service in data {
-                let key = ""
-                let value = BluetoothUUIDMapper.getServiceDescription(for: service.uuid)
-                convertedData[key] = value
-            }
-            return convertedData
+        var convertedServices: [String: String] = [:]
+
+        for service in data {
+            let key = service.uuid.uuidString
+            let value = BluetoothUUIDMapper.getServiceDescription(for: service.uuid)
+            convertedServices[key] = value
         }
+        return convertedServices
+    }
+
+    static func characteristicConverter(for data: [CBCharacteristic]) -> [String: String] {
+        var convertedCharacteristics: [String: String] = [:]
+
+        for characteristic in data {
+            let key = BluetoothUUIDMapper.getCharacteristicDescription(for: characteristic.uuid)
+
+            var value : String = ""
+
+            if let data = characteristic.value, !data.isEmpty {
+                if key == "Battery Level" {
+                    value = "\(String(data[0], radix: 10))%"
+                } else if key == "Current Time" {
+                    value = utils.parseCurrentTimeCharacteristic(data: data) ?? ""
+                } else if key == "Local Time" {
+                    value = utils.parseLocalTimeInformationCharacteristic(data: data) ?? ""
+                } else {
+                    if let string = String(data: data, encoding: .utf8), !string.isEmpty {
+                        value = string
+                    } else {
+                        // Show hex representation if not valid UTF-8
+                        value = data.map { String(format: "%02X", $0) }.joined(separator: " ")
+                    }
+                }
+
+                convertedCharacteristics[key] = value
+                print("==========")
+                print("Characteristic ----> \(key): \(value)")
+                dump(data)
+                print("")
+            }
+        }
+
+        return convertedCharacteristics
+    }
 }
 
 extension Device {
@@ -117,6 +151,7 @@ extension Device {
                 return response
 
             case .CBAdvertisementDataTimestamp:
+                print("Data Timestamp ----> \(inputValue)")
                 let timestamp: Double = NSString(string:"\(inputValue)").doubleValue
                 return utils.timeStampToDate(timestamp) // Double
 
@@ -174,23 +209,6 @@ extension Device {
 }
 
 struct utils {
-    static func stringListToArray(_ stringList: String) -> [String] {
-        return stringList.split(separator: ",").map(String.init)
-    }
-
-    static func uuidsToStringArray(_ uuids: [String]) -> [String] {
-        var serviceUUIDS: [String] = []
-        uuids.forEach { uuid in
-            serviceUUIDS = stringListToArray(uuid)
-        }
-        return serviceUUIDS
-    }
-
-    //    static func uuidStringToDescription(_ uuid: String) -> String {
-    //        let btMapper = BluetoothUUIDMapper()
-    //        return ""
-    //    }
-
     static func timeStampToDate(_ timeStamp: Double) -> String {
         let date = Date(timeIntervalSinceReferenceDate: timeStamp)
         let dateFormatter = DateFormatter()
@@ -211,6 +229,65 @@ struct utils {
 
         print(output)
         return output
+    }
+
+    static func parseCurrentTimeCharacteristic(data: Data) -> String? {
+        guard data.count >= 7 else { return nil }
+
+        // Extract year (little-endian)
+        let year = Int(data[0]) | (Int(data[1]) << 8)
+        let month = Int(data[2])
+        let day = Int(data[3])
+        let hours = Int(data[4])
+        let minutes = Int(data[5])
+        let seconds = Int(data[6])
+
+        // Validate the values
+        guard year > 0 && month >= 1 && month <= 12 && day >= 1 && day <= 31 &&
+                hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59 &&
+                seconds >= 0 && seconds <= 59 else {
+            return nil
+        }
+
+        // Create DateComponents
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = hours
+        components.minute = minutes
+        components.second = seconds
+
+        // Create Date
+        let calendar = Calendar.current
+        guard let date = calendar.date(from: components) else { return nil }
+
+        // Format the date
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm:ss | dd MMM yyyy"
+
+        return dateFormatter.string(from: date)
+    }
+
+    static func parseLocalTimeInformationCharacteristic(data: Data) -> String? {
+        guard data.count >= 2 else { return nil }
+
+        // Extract timezone offset (signed 8-bit integer)
+        let timeZoneQuarters = Int8(bitPattern: data[0])
+        let dstQuarters = Int(data[1])
+
+        // Convert to seconds (each unit = 15 minutes = 900 seconds)
+        let timeZoneOffsetSeconds = Int(timeZoneQuarters) * 15 * 60
+        let dstOffsetSeconds = TimeInterval(dstQuarters * 15 * 60)
+
+        // Create TimeZone
+        let timeZone = TimeZone(secondsFromGMT: timeZoneOffsetSeconds)
+
+        var resultString = ""
+        resultString += "TimeZone: \(timeZone?.identifier ?? "")"
+        resultString += "\nDST: \(dstOffsetSeconds / 3600) hours"
+
+        return resultString
     }
 }
 
@@ -262,5 +339,21 @@ enum ServiceAdvertisementDataKey: String, CaseIterable, Identifiable {
 
     static func setCase(for value: String) -> ServiceAdvertisementDataKey? {
         .allCases.first(where: { $0.rawValue == value })
+    }
+}
+
+struct DMService {
+    let uid: String = UUID().uuidString
+    let name: String
+    let characteristics: [String : String]
+
+    init(name: String, characteristics: [String : String]) {
+        self.name = name
+        self.characteristics = characteristics
+    }
+
+    init(service: CBService) {
+        self.name = BluetoothUUIDMapper.getServiceDescription(for: service.uuid.uuidString)
+        self.characteristics = Device.characteristicConverter(for: service.characteristics ?? [])
     }
 }

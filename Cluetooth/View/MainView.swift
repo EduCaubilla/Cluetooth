@@ -12,13 +12,13 @@ struct MainView: View {
     //MARK: - PROPERTIES
     @Query private var devices: [Device]
 
-    @ObservedObject var viewModel: MainViewModel
+    @StateObject private var viewModel: MainViewModel = MainViewModel()
 
     @State private var isConnectButtonPressed: Bool = false
+    @State private var showDeviceDetailView: Bool = false
 
     //MARK: - INITIALIZER
-    init(viewModel: MainViewModel = .init()) {
-        self.viewModel = viewModel
+    init() {
     }
 
     //MARK: - BODY
@@ -49,7 +49,7 @@ struct MainView: View {
 
                             Menu {
                                 NavigationLink("Info") {
-                                    DetailView()
+                                    DeviceView(viewModel: viewModel)
                                 }
                                 Button("Remove") {
                                     print("Remove device")
@@ -119,11 +119,15 @@ struct MainView: View {
 
                                         Image(systemName: device.expanded ? "chevron.down" : "chevron.right")
                                             .onTapGesture {
-                                                device.expanded = !device.expanded
+                                                if device.connected {
+                                                    showDeviceDetailView = true
+                                                } else {
+                                                    device.expanded = !device.expanded
+                                                }
                                             }
                                     } //: HSTACK
 
-                                    if device.expanded {
+                                    if device.expanded && !device.connected {
                                         VStack(alignment: .leading) {
                                             ForEach(Array(device.advertisementData.keys.sorted()), id: \.self) { serviceKey in
                                                 HStack{
@@ -140,6 +144,9 @@ struct MainView: View {
                                     }
                                 } //: FOR LOOP - Devices
                             } //: VSTACK
+                            .fullScreenCover(isPresented: $showDeviceDetailView) {
+                                DeviceView(viewModel: .init())
+                            }
                         } //: HSTACK - Main
                     }
                 } header: {

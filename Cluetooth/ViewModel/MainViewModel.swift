@@ -27,6 +27,7 @@ class MainViewModel: ObservableObject {
     init(bluetoothManager: CBServiceManager = CBServiceManager.shared) {
         self.bluetoothManager = bluetoothManager
         setupStates()
+        setupObservers()
     }
 
     //MARK: - FUNCTIONS
@@ -49,7 +50,9 @@ class MainViewModel: ObservableObject {
                 }
             }
             .assign(to: &$connectionStatus)
+    }
 
+    func setupObservers() {
         // Observe discovered devices
         bluetoothManager?.$discoveredDevices
             .assign(to: &$foundDevices)
@@ -62,27 +65,8 @@ class MainViewModel: ObservableObject {
     }
 
     func fetchDevices() async {
-        print("Fetch devices..")
-//        guard let bluetoothManager = bluetoothManager else { return }
-//
-//        let discoveredDevices = await withCheckedContinuation { (continuation: CheckedContinuation<[Device], Never>) in
-//            bluetoothManager.onScanFinished = { devices in
-//                continuation.resume(returning: devices)
-//            }
-//            bluetoothManager.startScanning()
-//        }
-//        await setFoundDevices(discoveredDevices)
-
         bluetoothManager?.startScanning()
     }
-
-//    @MainActor
-//    private func setFoundDevices(_ devices: [Device]) {
-//        print("Devices passed: \(devices.count)")
-//        foundDevices = devices.filter { devices.contains($0) == false }
-//
-//        print("Devices ready: \(foundDevices.count)")
-//    }
 
     func connectDevice(_ device: Device) {
         if linkedDevice != nil {

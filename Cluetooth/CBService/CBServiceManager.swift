@@ -317,7 +317,7 @@ extension CBServiceManager: CBPeripheralDelegate {
         print("Received data for \(characteristic.uuid): ")
         print(data as NSData)
 
-        handleReceivedData(data, peripheral, characteristic)
+        updateCharacteristicForService(peripheral, characteristic)
     }
 
     //MARK: - Wrote value in a characteristic
@@ -327,15 +327,6 @@ extension CBServiceManager: CBPeripheralDelegate {
         } else {
             print("Succesfully wrote value for \(characteristic.uuid): \(String(describing: characteristic.value))")
         }
-    }
-
-    //MARK: - Handle data receive from characteristic
-    func handleReceivedData(_ data: Data, _ peripheral: CBPeripheral, _ characteristic: CBCharacteristic) {
-        print("Received data for handling from \(peripheral.identifier.uuidString) for \(characteristic.uuid): ")
-//        dump(data)
-
-        // Save data into peripheral's characteristic
-
     }
 }
 
@@ -377,6 +368,20 @@ extension CBServiceManager {
             for var connectedService in connectedServices {
                 if connectedService.uuid == service.uuid {
                     connectedService = service
+                }
+            }
+        }
+    }
+
+    func updateCharacteristicForService(_ peripheral: CBPeripheral, _ characteristic: CBCharacteristic) {
+        if let connectedServices = connectedDevice?.services {
+            for connectedService in connectedServices {
+                if connectedService.uuid == characteristic.service?.uuid {
+                    for var connectedCharacteristic in connectedService.characteristics ?? [] {
+                        if connectedCharacteristic.uuid == characteristic.uuid {
+                            connectedCharacteristic = characteristic
+                        }
+                    }
                 }
             }
         }
