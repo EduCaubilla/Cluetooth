@@ -91,6 +91,15 @@ class MainViewModel: ObservableObject {
         foundDevices.remove(at: foundDevices.firstIndex(of: device)!)
     }
 
+    func toggleDeviceExpanded(uuid: UUID) {
+        if let index = foundDevices.firstIndex(where: { $0.uid == uuid }) {
+            foundDevices[index].expanded.toggle()
+            foundDevices = foundDevices
+
+            print("Toggle expand for \(foundDevices[index].name) to \(foundDevices[index].expanded)")
+        }
+    }
+
     //MARK: - SWIFT DATA
     private func addItem(uid: String, peripheral: CBPeripheral, name: String, advertisementData: [String: String], services: [CBService], rssi: Int) {
         withAnimation {

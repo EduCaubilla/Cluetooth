@@ -21,6 +21,15 @@ struct MainView: View {
     init() {
     }
 
+    //MARK: - FUNCTIONS
+    func handleTapChevron(for device: Device) {
+        if device.connected {
+            showDeviceDetailView = true
+        } else {
+            viewModel.toggleDeviceExpanded(uuid: device.uid)
+        }
+    }
+
     //MARK: - BODY
     var body: some View {
         NavigationStack {
@@ -69,63 +78,15 @@ struct MainView: View {
                     } else {
                         HStack {
                             VStack(alignment: .leading) {
-                                ForEach(viewModel.foundDevices, id: \.id) { device in
-                                    HStack {
-                                        Text(String(device.rssi))
-                                            .font(.system(size: 16, weight: .regular, design: .default))
-                                            .foregroundStyle(device.signalStrengthColor)
-                                            .padding(.trailing, 3)
-                                            .padding(.vertical, 5)
+                                ForEach(Array(viewModel.foundDevices.enumerated()), id: \.element.id) { index, device in
 
-                                        Text(device.peripheral?.name ?? "Unknown Device")
-                                            .font(.system(size: 18, weight: .regular, design: .default))
-
-                                        Spacer()
-
-                                        if device.connecting {
-                                            Text("Connecting")
-                                                .font(.system(size: 17, weight: .regular, design: .default))
-                                                .foregroundStyle(.orange)
-                                                .padding(.vertical, 3)
-
-                                            ProgressView()
-                                                .padding(.horizontal, 2)
-
-                                        } else if device.connected {
-                                            Text("Connected")
-                                                .font(.system(size: 17, weight: .regular, design: .default))
-                                                .foregroundStyle(.green)
-                                                .padding(.vertical, 3)
-                                                .padding(.trailing, 5)
-
-                                        } else {
-                                            Button("Connect") {
-                                                withAnimation(.easeInOut(duration: 0.3)) {
-                                                    viewModel.connectDevice(device)
-                                                    isConnectButtonPressed = true
-                                                }
-
-                                            }
-                                            .padding(.vertical, 3)
-                                            .padding(.horizontal)
-                                            .font(.system(size: 18, weight: .regular, design: .default))
-                                            .buttonStyle(.borderless)
-                                            .foregroundStyle(.gray)
-                                            .background(isConnectButtonPressed ? .gray.opacity(0.1) : .gray.opacity(0.12))
-                                            .clipShape(
-                                                Capsule()
-                                            )
-                                        }
-
-                                        Image(systemName: device.expanded ? "chevron.down" : "chevron.right")
-                                            .onTapGesture {
-                                                if device.connected {
-                                                    showDeviceDetailView = true
-                                                } else {
-                                                    device.expanded = !device.expanded
-                                                }
-                                            }
-                                    } //: HSTACK
+                                    MainViewDeviceCell(
+                                        device: $viewModel.foundDevices[index],
+                                        connectAction: {viewModel.connectDevice(device)},
+                                        toggleAction: {handleTapChevron(for: device)},
+                                        isConnectButtonPressed: $isConnectButtonPressed,
+                                        showDeviceDetailView: $showDeviceDetailView
+                                    )
 
                                     if device.expanded && !device.connected {
                                         VStack(alignment: .leading) {

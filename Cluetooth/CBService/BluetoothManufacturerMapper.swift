@@ -108,13 +108,9 @@ struct BluetoothManufacturerMapper {
 
         // Extract company-specific data (remaining bytes)
         let companyData = data.subdata(in: 2..<data.count)
-
         let companyName = mapCompanyIdToManufacturer(companyId)
 
-        print("=== Manufacturer Data ===")
-        print("Company ID: 0x\(String(format: "%04X", companyId))")
-        print("Company: \(companyName)")
-        print("Data Length: \(companyData.count) bytes")
+        print("Manufacturer Data --> Company: \(companyName)")
 
         // Parse company-specific data
         let parsedData = parseCompanySpecificData(companyId: companyId, data: companyData)

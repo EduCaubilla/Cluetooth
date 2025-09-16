@@ -24,7 +24,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
     private var targetServiceUUIDs: [CBUUID] = []
     private var characteristics: [CBUUID: CBCharacteristic] = [:]
 
-    private let scanTimeout: TimeInterval = 30.0
+    private let scanTimeout: TimeInterval = 10.0
     private var scanTimer: Timer?
 
     //MARK: - INITIALIZER
@@ -315,7 +315,6 @@ extension CBServiceManager: CBPeripheralDelegate {
         }
         
         print("Received data for \(characteristic.uuid): ")
-        print(data as NSData)
 
         updateCharacteristicForService(peripheral, characteristic)
     }

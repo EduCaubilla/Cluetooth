@@ -114,10 +114,6 @@ extension Device {
                 }
 
                 convertedCharacteristics[key] = value
-                print("==========")
-                print("Characteristic ----> \(key): \(value)")
-                dump(data)
-                print("")
             }
         }
 
