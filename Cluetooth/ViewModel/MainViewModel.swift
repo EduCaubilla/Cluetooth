@@ -69,14 +69,10 @@ class MainViewModel: ObservableObject {
     }
 
     func connectDevice(_ device: Device) {
-        if linkedDevice != nil {
-            bluetoothManager?.disconnect(from: linkedDevice!)
-        }
+        disconnectDevice()
 
         print("Connecting Device: \(device.name)")
         bluetoothManager?.connect(to: device)
-
-        _ = foundDevices.map { $0.connected = false }
 
         let connectedDevice = foundDevices.first(where: { $0.uid == device.uid })
         connectedDevice?.connecting = true
@@ -84,6 +80,15 @@ class MainViewModel: ObservableObject {
         foundDevices = foundDevices.sorted { $0.connecting && !$1.connecting }
 
         linkedDevice = device
+    }
+
+
+    func disconnectDevice() {
+        if linkedDevice != nil {
+            bluetoothManager?.disconnect(from: linkedDevice!)
+        }
+
+        _ = foundDevices.map { $0.connected = false }
     }
 
     func removeFoundDevice(_ device: Device) {

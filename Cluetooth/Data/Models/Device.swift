@@ -93,7 +93,7 @@ extension Device {
         var convertedCharacteristics: [String: String] = [:]
 
         for characteristic in data {
-            let key = BluetoothUUIDMapper.getCharacteristicDescription(for: characteristic.uuid)
+            var key = BluetoothUUIDMapper.getCharacteristicDescription(for: characteristic.uuid)
 
             var value : String = ""
 
@@ -102,7 +102,8 @@ extension Device {
                     value = "\(String(data[0], radix: 10))%"
                 } else if key == "Current Time" {
                     value = utils.parseCurrentTimeCharacteristic(data: data) ?? ""
-                } else if key == "Local Time" {
+                } else if key == "Local Time Information" {
+                    key = "Local Time"
                     value = utils.parseLocalTimeInformationCharacteristic(data: data) ?? ""
                 } else {
                     if let string = String(data: data, encoding: .utf8), !string.isEmpty {
@@ -274,14 +275,17 @@ struct utils {
 
         // Convert to seconds (each unit = 15 minutes = 900 seconds)
         let timeZoneOffsetSeconds = Int(timeZoneQuarters) * 15 * 60
-        let dstOffsetSeconds = TimeInterval(dstQuarters * 15 * 60)
+        let dstOffsetHours = Int(TimeInterval(dstQuarters * 15 * 60)/3600)
 
         // Create TimeZone
         let timeZone = TimeZone(secondsFromGMT: timeZoneOffsetSeconds)
 
         var resultString = ""
-        resultString += "TimeZone: \(timeZone?.identifier ?? "")"
-        resultString += "\nDST: \(dstOffsetSeconds / 3600) hours"
+        resultString += "\(timeZone?.identifier ?? "")"
+
+        if dstOffsetHours > 0 {
+            resultString += "\nDST: +\(dstOffsetHours) hour"
+        }
 
         return resultString
     }

@@ -12,10 +12,13 @@ struct MainViewDeviceCell: View {
     //MARK: - PROPERTIES
     @Binding var device: Device
     var connectAction: () -> Void
+    var disconnectAction: () -> Void
     var toggleAction: () -> Void
 
     @Binding var isConnectButtonPressed: Bool
     @Binding var showDeviceDetailView: Bool
+
+    @State var isPressed: Bool = false
 
     //MARK: - BODY
     var body: some View {
@@ -33,6 +36,13 @@ struct MainViewDeviceCell: View {
                 Spacer()
 
                 if device.connecting {
+                    Image(systemName: "xmark.circle")
+                        .foregroundStyle(.secondary.opacity(0.5))
+                        .padding(.horizontal, 2)
+                        .onTapGesture {
+                            disconnectAction()
+                        }
+
                     Text("Connecting")
                         .font(.system(size: 17, weight: .regular, design: .default))
                         .foregroundStyle(.orange)
@@ -48,6 +58,12 @@ struct MainViewDeviceCell: View {
                         .padding(.vertical, 3)
                         .padding(.trailing, 5)
 
+                    Image(systemName: "xmark.circle")
+                        .foregroundStyle(.secondary.opacity(0.5))
+                        .padding(.trailing, 2)
+                        .onTapGesture {
+                            disconnectAction()
+                        }
                 } else {
                     Button("Connect") {
                         withAnimation(.easeInOut(duration: 0.3)) {
@@ -60,7 +76,17 @@ struct MainViewDeviceCell: View {
                     .font(.system(size: 18, weight: .regular, design: .default))
                     .buttonStyle(.borderless)
                     .foregroundStyle(.gray)
-                    .background(isConnectButtonPressed ? .gray.opacity(0.1) : .gray.opacity(0.12))
+                    .gesture(
+                        LongPressGesture(minimumDuration: 0)
+                            .onChanged { _ in
+                                self.isPressed = true
+                            }
+                            .onEnded { _ in
+                                self.isPressed = false
+                            }
+                    )
+                    .animation(.easeInOut(duration: 0.2), value: isPressed)
+                    .background(self.isPressed ? .gray.opacity(0.1) : .gray.opacity(0.2))
                     .clipShape(
                         Capsule()
                     )

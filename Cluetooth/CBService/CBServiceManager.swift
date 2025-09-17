@@ -180,14 +180,14 @@ extension CBServiceManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         let deviceName = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown Peripheral"
 
-        if deviceName.isEmpty || deviceName == "Unknown Peripheral" {
+        if deviceName.isEmpty || deviceName == "Unknown Name" {
             return
         }
 
         let device = Device(
             uid: peripheral.identifier.uuidString,
             peripheral: peripheral,
-            name: peripheral.name ?? "Unknown Peripheral",
+            name: peripheral.name ?? "Unknown Name",
             advertisementData: Device.advDataConverter(advertisementData),
             services: [],
             rssi: RSSI.intValue
@@ -199,9 +199,8 @@ extension CBServiceManager: CBCentralManagerDelegate {
             discoveredDevices.append(device)
             print("Device found \(deviceName)")
             print("With RSSI: \(RSSI.intValue)")
-            print("Peripheral Data:")
-            dump(peripheral)
-            dump(device.services)
+            print("Peripheral Adv Data:")
+            dump(device.advertisementData)
         }
     }
 
@@ -258,11 +257,10 @@ extension CBServiceManager: CBPeripheralDelegate {
             return
         }
 
-        print("Discovered services: ")
-        dump(services)
+        print("Discovered services for \(peripheral.name ?? "Unnamed peripheral")")
 
         setConnectedDevice(peripheral)
-        setDeviceServices(peripheral)
+        setConnectedDeviceServices(peripheral)
 
         for service in services {
             print("Discovering characteristics for service \(service.uuid)")
@@ -299,7 +297,7 @@ extension CBServiceManager: CBPeripheralDelegate {
             }
         }
 
-        setCharacteristicsForService(peripheral, service)
+        setConnectedCharacteristicForService(peripheral, service)
     }
 
     //MARK: - Updated characteristic for a service
@@ -314,9 +312,9 @@ extension CBServiceManager: CBPeripheralDelegate {
             return
         }
         
-        print("Received data for \(characteristic.uuid): ")
+        print("Received data for \(characteristic.uuid): \(data)")
 
-        updateCharacteristicForService(peripheral, characteristic)
+        updateConnectedCharacteristicForService(peripheral, characteristic)
     }
 
     //MARK: - Wrote value in a characteristic
@@ -329,6 +327,7 @@ extension CBServiceManager: CBPeripheralDelegate {
     }
 }
 
+//MARK: - EXT Manage Connected Device
 extension CBServiceManager {
     func setConnectingDevice(_ peripheral: CBPeripheral) {
         let connectingDevice = discoveredDevices.first(where: {$0.uid == peripheral.identifier})
@@ -356,13 +355,13 @@ extension CBServiceManager {
         connectedPeripheral = nil
     }
 
-    func setDeviceServices(_ peripheral: CBPeripheral) {
+    func setConnectedDeviceServices(_ peripheral: CBPeripheral) {
         if let foundServicesForDevice = peripheral.services {
             connectedDevice?.services = foundServicesForDevice
         }
     }
 
-    func setCharacteristicsForService(_ peripheral: CBPeripheral, _ service: CBService) {
+    func setConnectedCharacteristicForService(_ peripheral: CBPeripheral, _ service: CBService) {
         if let connectedServices = connectedDevice?.services {
             for var connectedService in connectedServices {
                 if connectedService.uuid == service.uuid {
@@ -372,7 +371,7 @@ extension CBServiceManager {
         }
     }
 
-    func updateCharacteristicForService(_ peripheral: CBPeripheral, _ characteristic: CBCharacteristic) {
+    func updateConnectedCharacteristicForService(_ peripheral: CBPeripheral, _ characteristic: CBCharacteristic) {
         if let connectedServices = connectedDevice?.services {
             for connectedService in connectedServices {
                 if connectedService.uuid == characteristic.service?.uuid {

@@ -348,7 +348,7 @@ struct BluetoothUUIDMapper {
     }
 
     static func getServiceDescription(for uuidString: String) -> String {
-        return serviceDescriptions[uuidString] ?? "Unknown Service (\(uuidString))"
+        return serviceDescriptions[uuidString] ?? "Unknown Service\n(\(uuidString))"
     }
 
     /// Get characteristic description from UUID

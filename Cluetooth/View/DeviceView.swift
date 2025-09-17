@@ -24,6 +24,7 @@ struct DeviceView: View {
                 Text("\(viewModel.linkedDevice?.name ?? "Unknown")")
                     .font(.title)
                     .fontWeight(.light)
+                    .foregroundStyle(Color.accentColor)
 
                 Spacer()
 
@@ -35,88 +36,74 @@ struct DeviceView: View {
             } //: HSTACK
             .padding(.top, 15)
             .padding(.horizontal, 10)
-            .padding(.bottom, 0)
+            .padding(.bottom, -10)
 
             ScrollView {
                 VStack (alignment: .leading, spacing: 15) {
                     // Name
                     VStack (alignment: .leading, spacing: 10) {
-                        Text(viewModel.linkedDevice?.name ?? "Unknown")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.gray)
+                        Text("UID")
+                            .font(.title2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
 
-                        HStack {
-                            Text("UID ")
-                                .font(.title3)
+                        Text(viewModel.linkedDevice?.uid.uuidString ?? "Unknown UID")
+                            .font(.callout)
+                            .fontWeight(.light)
 
-                            Spacer()
-
-                            Text(viewModel.linkedDevice?.uid.uuidString ?? "Unknown UID")
-                        }
                     } //: VSTACK
+
+                    Divider()
 
                     // Adv Data
                     VStack (alignment: .leading, spacing: 10) {
                         Text("Advertisement Data")
-                            .font(.headline)
-                            .fontWeight(.bold)
+                            .font(.title2)
+                            .fontWeight(.medium)
                             .foregroundStyle(.secondary)
+                            .padding(.bottom, 10)
 
                         if let advData = viewModel.linkedDevice?.advertisementData, advData.isEmpty {
                             Text("No advertisement data found.")
                         } else {
                             ForEach(Array(viewModel.linkedDevice?.advertisementData ?? [:]), id: \.key) { key, value in
-                                HStack(alignment: .top, spacing: 10) {
-                                    Text(key)
-                                        .font(.subheadline)
-
-                                    Spacer()
-
-                                    Text(value)
-                                }
+                                DeviceViewItemCell(inputKey: key, inputValue: value)
                             }
                         }
                     } //: VSTACK - Advertisement Data
 
+                    Divider()
+
                     // Services + Characteristics
                     VStack (alignment: .leading, spacing: 10) {
                         Text("Services")
-                            .font(.headline)
-                            .fontWeight(.bold)
+                            .font(.title2)
+                            .fontWeight(.medium)
                             .foregroundStyle(.secondary)
+                            .padding(.vertical, 5)
 
                         ForEach(Array(viewModel.linkedDevice?.servicesData ?? []), id: \.uid) { serviceData in
-                            VStack(alignment: .leading, spacing: 5) {
+                            VStack(alignment: .leading, spacing: 10) {
                                 Text(serviceData.name)
-                                    .font(.subheadline)
+                                    .font(.headline)
                                     .foregroundColor(.secondary)
-                                    .padding(.bottom, 4)
-                                    .fontWeight(.semibold)
+                                    .fontWeight(.bold)
 
                                 if serviceData.characteristics.isEmpty {
                                     Text("No characteristics found.")
-                                        .foregroundColor(.secondary)
+                                        .font(.callout)
+                                        .fontWeight(.light)
                                 }
                                 else {
                                     ForEach(Array(serviceData.characteristics), id: \.key) { characteristic in
-                                        HStack(alignment: .top, spacing: 5) {
-                                            Text(characteristic.key)
-                                                .font(.callout)
-                                                .fontWeight(.light)
-
-                                            Spacer()
-
-                                            Text(characteristic.value)
-                                                .font(.callout)
-                                                .fontWeight(.light)
-                                        }
+                                        DeviceViewItemCell(inputKey: characteristic.key, inputValue: characteristic.value)
                                     }
                                 }
                             }
+                            .padding(.top, 5)
+                            .padding(.bottom, 10)
                         }
                     } //: VSTACK - Services
-
                 } //: VSTACK)
                 .padding(10)
             } //: SCROLLVIEW

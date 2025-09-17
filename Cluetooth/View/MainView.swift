@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct MainView: View {
     //MARK: - PROPERTIES
@@ -19,6 +20,7 @@ struct MainView: View {
 
     //MARK: - INITIALIZER
     init() {
+        UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: UIColor(Color.accentColor)]
     }
 
     //MARK: - FUNCTIONS
@@ -83,6 +85,7 @@ struct MainView: View {
                                     MainViewDeviceCell(
                                         device: $viewModel.foundDevices[index],
                                         connectAction: {viewModel.connectDevice(device)},
+                                        disconnectAction: {viewModel.disconnectDevice()},
                                         toggleAction: {handleTapChevron(for: device)},
                                         isConnectButtonPressed: $isConnectButtonPressed,
                                         showDeviceDetailView: $showDeviceDetailView
@@ -93,16 +96,23 @@ struct MainView: View {
                                             ForEach(Array(device.advertisementData.keys.sorted()), id: \.self) { serviceKey in
                                                 HStack{
                                                     Text("\(serviceKey)")
-                                                        .font(.system(size: 15, weight: .regular, design: .default))
+                                                        .font(.caption)
+                                                        .fontWeight(.semibold)
+                                                        .foregroundStyle(.secondary)
                                                     Spacer()
                                                     Text("\(device.advertisementData[serviceKey] ?? "No value")")
-                                                      .font(.system(size: 15, weight: .regular, design: .default))
+                                                        .font(.caption)
+                                                        .fontWeight(.light)
                                                 }
-                                                .padding(.bottom, 3)
+                                                .padding(.vertical, 3)
                                             } //: FOR LOOP - Services
                                         } //: VSTACK
-                                        .padding(.leading, 5)
+                                        .padding(5)
                                     }
+
+                                    Divider()
+//                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 3)
                                 } //: FOR LOOP - Devices
                             } //: VSTACK
                             .fullScreenCover(isPresented: $showDeviceDetailView) {
@@ -135,7 +145,7 @@ struct MainView: View {
                     }
                 }
             } //: BUTTON
-            .foregroundStyle(viewModel.isScanning ? .blue.opacity(0.5) : .blue)
+            .foregroundStyle(viewModel.isScanning ? Color.accentColor.opacity(0.5) : Color.accentColor.opacity(1))
             .font(.system(size: 25, weight: .medium, design: .default))
             .padding(.vertical, 15)
         } //: NAV
