@@ -10,7 +10,7 @@ import SwiftData
 import CoreBluetooth
 
 //MARK: - MODEL
-final class Device: Identifiable {
+final class Device: Identifiable, ObservableObject {
     var uid: UUID
     var peripheral: CBPeripheral? = nil
     var name: String
@@ -20,7 +20,7 @@ final class Device: Identifiable {
     var rssi: Int
     var connected: Bool = false
     var connecting: Bool = false
-    var timestamp: Date?
+    var timestamp: String?
     var expanded: Bool = false
 
     var id: String { uid.uuidString }
@@ -37,32 +37,38 @@ final class Device: Identifiable {
 }
 
     //MARK: - INITIALIZER
-    init(uid: String,
-        peripheral: CBPeripheral,
-        name: String,
-        advertisementData: [String: String],
-        services: [CBService],
-        rssi: Int) {
-        self.uid = UUID(uuidString: uid)!
+    init(peripheral: CBPeripheral,
+         name: String,
+         advertisementData: [String: String],
+         services: [CBService],
+         rssi: Int,
+         timestamp: String?) {
+        self.uid = peripheral.identifier.uuidString.isEmpty ? UUID() : UUID(uuidString: peripheral.identifier.uuidString)!
         self.peripheral = peripheral
         self.name = name
         self.advertisementData = advertisementData
         self.services = services
         self.rssi = rssi
-        self.timestamp = timestamp ?? Date.now
+        self.timestamp = timestamp ?? Utils.timeStampToDate(Date.now.timeIntervalSince1970)
     }
 
     init(peripheral: CBPeripheral,
          advertisementData: [String: Any],
          services: [CBService],
          connected: Bool = false) {
-        self.uid = UUID(uuidString: peripheral.identifier.uuidString)!
+        self.uid = peripheral.identifier.uuidString.isEmpty ? UUID() : UUID(uuidString: peripheral.identifier.uuidString)!
         self.peripheral = peripheral
         self.name = peripheral.name ?? "Unknown"
         self.advertisementData = Device.advDataConverter(advertisementData)
         self.services = services
         self.rssi = 0
         self.connected = connected
+
+        if advertisementData["kCBAdvDataTimestamp"] != nil {
+            self.timestamp = Utils.timeStampToDate(advertisementData["kCBAdvDataTimestamp"] as! TimeInterval)
+        } else {
+            self.timestamp = timestamp ?? Utils.timeStampToDate(Date.now.timeIntervalSince1970)
+        }
     }
 }
 
@@ -173,6 +179,7 @@ extension Device {
     }
 }
 
+//MARK: - EXT - Adv Mapper
 extension Device {
     static func getAdvertisementValueMapped(for adv:ServiceAdvertisementDataKey?, with inputValue: Any) -> String {
         switch adv {
@@ -199,7 +206,6 @@ extension Device {
                 return response
 
             case .CBAdvertisementDataTimestamp:
-                print("Data Timestamp ----> \(inputValue)")
                 let timestamp: Double = NSString(string:"\(inputValue)").doubleValue
                 return Utils.timeStampToDate(timestamp) // Double
 

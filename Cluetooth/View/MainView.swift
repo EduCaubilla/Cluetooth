@@ -11,10 +11,11 @@ import UIKit
 
 struct MainView: View {
     //MARK: - PROPERTIES
-    @StateObject private var viewModel: MainViewModel = MainViewModel()
+    @ObservedObject private var viewModel: MainViewModel = MainViewModel()
 
     @State private var isConnectButtonPressed: Bool = false
     @State private var showDeviceDetailView: Bool = false
+    @State private var scanTapped: Bool = false
 
     //MARK: - INITIALIZER
     init() {
@@ -33,48 +34,27 @@ struct MainView: View {
     //MARK: - BODY
     var body: some View {
         NavigationStack {
-            List {
-                if(viewModel.savedDevices.isEmpty) {
-                    EmptyView()
-                } else {
-                    Section(header: Text("My Devices")) {
-                    // TODO - List of already connected devices from local db
-                    // Example cell
-                        HStack {
-                            Text("Device 1")
+            VStack {
+                HStack(alignment: .top, spacing: 15) {
+                    Text("Devices nearby")
+                        .padding(.leading, 20)
+                        .foregroundStyle(.secondary)
+                        .font(.title2)
+                        .fontWeight(.light)
 
-                            Spacer()
+                    if viewModel.isScanning {
+                        ProgressView()
+                            .padding(.top, 8)
+                    }
 
-                            Button("Connect") {
-
-                            } //: BUTTON
-                            .foregroundStyle(.gray)
-                            .padding(.horizontal)
-                            .padding(.vertical, 5)
-                            .background(.gray.opacity(0.15))
-                            .clipShape(
-                                Capsule()
-                            )
-
-                            Menu {
-                                NavigationLink("Info") {
-                                    DeviceView(viewModel: viewModel)
-                                }
-                                Button("Remove") {
-                                    print("Remove device")
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis.circle")
-                            } //: MENU
-                        } //: HSTACK
-                        .padding(.vertical, 3)
-                    } //: SECTION
+                    Spacer()
                 }
+                .padding(.bottom, 10)
 
-                Section {
+
+                List {
                     if viewModel.foundDevices.isEmpty {
-                        Text("No devices")
-                            .foregroundStyle(.gray)
+                        EmptyView()
                     } else {
                         HStack {
                             VStack(alignment: .leading) {
@@ -109,7 +89,6 @@ struct MainView: View {
                                     }
 
                                     Divider()
-//                                        .padding(.horizontal, 5)
                                         .padding(.vertical, 3)
                                 } //: FOR LOOP - Devices
                             } //: VSTACK
@@ -118,34 +97,34 @@ struct MainView: View {
                             }
                         } //: HSTACK - Main
                     }
-                } header: {
-                    HStack {
-                        Text("Devices")
-
-                        if viewModel.isScanning {
-                            ProgressView()
-                                .padding(.leading, 5)
+                } //: LIST
+                .padding(.top, -15)
+                .listStyle(.inset)
+                .navigationTitle(Text("Cluetooth"))
+                .navigationBarTitleDisplayMode(.inline)
+                .scrollContentBackground(.hidden)
+                .safeAreaInset(edge: .bottom, alignment: .center, spacing: 20) {
+                    Button {
+                        Task {
+                            if !viewModel.isScanning {
+                                await viewModel.fetchDevices()
+                            }
                         }
+                    } label: {
+                        Text("Scan for devices")
+                            .font(.title3)
+                            .fontWeight(.regular)
+                            .foregroundStyle(viewModel.isScanning ? Color.accentColor.opacity(0.5) : Color.accentColor.opacity(1))
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 60)
+                            .background(viewModel.isScanning ? Color.ctGray.opacity(0.5) : Color.ctGray.opacity(1))
                     }
-                } footer: {
-                    EmptyView()
-                } //: SECTION
-            } //: LIST
-            .listStyle(.grouped)
-            .navigationTitle(Text("Cluetooth"))
-            .navigationBarTitleDisplayMode(.inline)
-            .padding(.top, -15)
-
-            Button("Scan for devices") {
-                Task {
-                    if !viewModel.isScanning {
-                        await viewModel.fetchDevices()
-                    }
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.3), radius: 3, x: 2.0, y: 2.0)
+                    .padding(20)
                 }
-            } //: BUTTON
-            .foregroundStyle(viewModel.isScanning ? Color.accentColor.opacity(0.5) : Color.accentColor.opacity(1))
-            .font(.system(size: 25, weight: .medium, design: .default))
-            .padding(.vertical, 15)
+
+            }
         } //: NAV
     } //: VIEW
 }

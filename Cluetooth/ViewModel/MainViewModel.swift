@@ -15,7 +15,6 @@ class MainViewModel: ObservableObject {
 
     let bluetoothManager : CBServiceManager?
 
-    @Published var savedDevices: [Device] = []
     @Published var foundDevices: [Device] = []
     @Published var linkedDevice: Device?
     @Published var connectionStatus: String = "Disconnected"
@@ -98,8 +97,6 @@ class MainViewModel: ObservableObject {
         if let index = foundDevices.firstIndex(where: { $0.uid == uuid }) {
             foundDevices[index].expanded.toggle()
             foundDevices = foundDevices
-
-            print("Toggle expand for \(foundDevices[index].name) to \(foundDevices[index].expanded)")
         }
     }
 }

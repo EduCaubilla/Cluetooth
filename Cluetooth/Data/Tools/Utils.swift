@@ -34,7 +34,6 @@ struct Utils {
         cleanInput = cleanInput.replacingOccurrences(of: ".", with: "")
         let output = cleanInput.replacingOccurrences(of: "}", with: "")
 
-        print(output)
         return output
     }
 

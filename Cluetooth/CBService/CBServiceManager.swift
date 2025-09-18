@@ -178,30 +178,31 @@ extension CBServiceManager: CBCentralManagerDelegate {
 
     //MARK: - Discover Device
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        let deviceName = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown Peripheral"
+        let device = createDevice(peripheral: peripheral, advertisementData: advertisementData, RSSI: RSSI)
+        guard let device = device else { return }
 
-        if deviceName.isEmpty || deviceName == "Unknown Name" {
+        // In case that has no name only connectables will show
+        let isConnectable = isValidConnectable(device)
+        if device.name == "Unknown Name" && !isConnectable {
             return
         }
 
-        let device = Device(
-            uid: peripheral.identifier.uuidString,
-            peripheral: peripheral,
-            name: peripheral.name ?? "Unknown Name",
-            advertisementData: Device.advDataConverter(advertisementData),
-            services: [],
-            rssi: RSSI.intValue
-        )
-
-        let checkDuplicates = discoveredDevices.contains(where: { $0.peripheral?.name == peripheral.name && $0.uid.uuidString == peripheral.identifier.uuidString })
+        let checkDuplicates = discoveredDevices.contains(where: { $0.uid.uuidString == device.uid.uuidString })
 
         if !checkDuplicates {
             discoveredDevices.append(device)
-            print("Device found \(deviceName)")
-            print("With RSSI: \(RSSI.intValue)")
-            print("Peripheral Adv Data:")
-            dump(device.advertisementData)
+            print("Device found \(device.name)")
+//            print("With RSSI: \(RSSI.intValue)")
+//            print("Peripheral Adv Data:")
+//            dump(device.advertisementData)
         }
+        else if checkDuplicates {
+            updateDeviceInList(device)
+        }
+
+        discoveredDevices.sort { $0.name != "Unknown Name" && $1.name == "Unknown Name" }
+        discoveredDevices.sort { $0.rssi > $1.rssi }
+        discoveredDevices.sort { $0.connected && !$1.connected }
     }
 
     //MARK: - Connect Device
@@ -327,6 +328,58 @@ extension CBServiceManager: CBPeripheralDelegate {
     }
 }
 
+//MARK: - EXT Manage Device
+extension CBServiceManager {
+    func createDevice(peripheral : CBPeripheral, advertisementData: [String : Any], RSSI: NSNumber) -> Device? {
+        let deviceName = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown Name"
+
+        let device = Device(
+            peripheral: peripheral,
+            name: deviceName,
+            advertisementData: Device.advDataConverter(advertisementData),
+            services: [],
+            rssi: RSSI.intValue,
+            timestamp: nil
+        )
+
+        return device
+    }
+
+    func updateDeviceInList(_ device: Device) {
+        guard let index = discoveredDevices.firstIndex(where: { $0.uid == device.uid && $0.peripheral?.identifier == device.peripheral?.identifier }) else {
+            print("Update device not found")
+            return
+        }
+
+        guard let peripheral = device.peripheral else {
+            print("Peripheral in update device is nil")
+            return
+        }
+
+        let updatedDevice = Device(
+            peripheral: peripheral,
+            name: device.name,
+            advertisementData: device.advertisementData,
+            services: device.services,
+            rssi: device.rssi,
+            timestamp: nil
+        )
+
+        discoveredDevices[index] = updatedDevice
+
+        if connectedDevice?.uid == updatedDevice.uid {
+            connectedDevice = updatedDevice
+        }
+
+        print("Updated Device: \(device.name) in List --->")
+    }
+
+    func isValidConnectable(_ device: Device) -> Bool {
+        return (device.advertisementData.contains(where: { $0.key == ServiceAdvertisementDataKey.CBAdvertisementDataIsConnectable.displayName }))
+        && device.advertisementData[ServiceAdvertisementDataKey.CBAdvertisementDataIsConnectable.displayName] == "Yes"
+    }
+}
+
 //MARK: - EXT Manage Connected Device
 extension CBServiceManager {
     func setConnectingDevice(_ peripheral: CBPeripheral) {
@@ -372,20 +425,16 @@ extension CBServiceManager {
     }
 
     func updateConnectedCharacteristicForService(_ peripheral: CBPeripheral, _ characteristic: CBCharacteristic) {
-        if let connectedServices = connectedDevice?.services {
-            for connectedService in connectedServices {
-                if connectedService.uuid == characteristic.service?.uuid {
-                    for var connectedCharacteristic in connectedService.characteristics ?? [] {
-                        if connectedCharacteristic.uuid == characteristic.uuid {
-                            connectedCharacteristic = characteristic
-                        }
-                    }
-                }
-            }
-        }
+        let linkedDevice = discoveredDevices.first(where: {$0.peripheral?.identifier == peripheral.identifier})
+        guard linkedDevice == linkedDevice else { return }
+
+        print("Updated Characteristic \(characteristic.uuid) for device: \(peripheral.name ?? "Unknown Device")")
+
+        updateDeviceInList(linkedDevice!)
     }
 }
 
+//MARK: - ENUM BluetoothState
 enum BluetoothState : Equatable {
     case unknown
     case resetting
