@@ -11,8 +11,6 @@ import UIKit
 
 struct MainView: View {
     //MARK: - PROPERTIES
-    @Query private var devices: [Device]
-
     @StateObject private var viewModel: MainViewModel = MainViewModel()
 
     @State private var isConnectButtonPressed: Bool = false

@@ -21,8 +21,6 @@ class MainViewModel: ObservableObject {
     @Published var connectionStatus: String = "Disconnected"
     @Published var isScanning: Bool = false
 
-    @Query private var devices: [Device]
-
     //MARK: - INITIALIZER
     init(bluetoothManager: CBServiceManager = CBServiceManager.shared) {
         self.bluetoothManager = bluetoothManager
@@ -102,29 +100,6 @@ class MainViewModel: ObservableObject {
             foundDevices = foundDevices
 
             print("Toggle expand for \(foundDevices[index].name) to \(foundDevices[index].expanded)")
-        }
-    }
-
-    //MARK: - SWIFT DATA
-    private func addItem(uid: String, peripheral: CBPeripheral, name: String, advertisementData: [String: String], services: [CBService], rssi: Int) {
-        withAnimation {
-            let newDevice = Device(
-                uid: uid,
-                peripheral: peripheral,
-                name: name,
-                advertisementData: advertisementData,
-                services: services,
-                rssi: rssi
-            )
-            modelContext.insert(newDevice)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(devices[index])
-            }
         }
     }
 }

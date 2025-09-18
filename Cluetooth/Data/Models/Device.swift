@@ -9,19 +9,19 @@ import SwiftUI
 import SwiftData
 import CoreBluetooth
 
-@Model
-final class Device: Equatable, Identifiable {
-    @Attribute(.unique) var uid: UUID
-    @Transient var peripheral: CBPeripheral? = nil
+//MARK: - MODEL
+final class Device: Identifiable {
+    var uid: UUID
+    var peripheral: CBPeripheral? = nil
     var name: String
     var advertisementData : [String: String]
-    @Transient var services : [CBService] = []
-    @Transient var characteristics : [CBCharacteristic] = []
+    var services : [CBService] = []
+    var characteristics : [CBCharacteristic] = []
     var rssi: Int
-    @Transient var connected: Bool = false
-    @Transient var connecting: Bool = false
+    var connected: Bool = false
+    var connecting: Bool = false
     var timestamp: Date?
-    @Transient var expanded: Bool = false
+    var expanded: Bool = false
 
     var id: String { uid.uuidString }
     var signalStrengthColor: Color {
@@ -32,9 +32,11 @@ final class Device: Equatable, Identifiable {
             default: return .red
         }
     }
-    var servicesData : [DMService] { services.map { DMService(service: $0) }
+
+    var servicesData : [Service] { services.map { Service(service: $0) }
 }
 
+    //MARK: - INITIALIZER
     init(uid: String,
         peripheral: CBPeripheral,
         name: String,
@@ -64,6 +66,27 @@ final class Device: Equatable, Identifiable {
     }
 }
 
+//MARK: - EXT - Equatable
+extension Device : Equatable {
+    static func == (lhs: Device, rhs: Device) -> Bool {
+        return lhs.uid == rhs.uid &&
+        lhs.peripheral === rhs.peripheral &&
+        lhs.name == rhs.name &&
+        lhs.advertisementData == rhs.advertisementData &&
+        lhs.services == rhs.services &&
+        lhs.characteristics == rhs.characteristics &&
+        lhs.rssi == rhs.rssi &&
+        lhs.connected == rhs.connected &&
+        lhs.connecting == rhs.connecting &&
+        lhs.timestamp == rhs.timestamp &&
+        lhs.expanded == rhs.expanded &&
+        lhs.signalStrengthColor == rhs.signalStrengthColor &&
+        lhs.id == rhs.id &&
+        lhs.servicesData == rhs.servicesData
+    }
+}
+
+//MARK: - EXT - Converters
 extension Device {
     static func advDataConverter(_ advData: [String : Any]) -> [String: String] {
         var convertedAdvs : [String: String] = [:]
@@ -101,10 +124,10 @@ extension Device {
                 if key == "Battery Level" {
                     value = "\(String(data[0], radix: 10))%"
                 } else if key == "Current Time" {
-                    value = utils.parseCurrentTimeCharacteristic(data: data) ?? ""
+                    value = Utils.parseCurrentTimeCharacteristic(data: data) ?? ""
                 } else if key == "Local Time Information" {
                     key = "Local Time"
-                    value = utils.parseLocalTimeInformationCharacteristic(data: data) ?? ""
+                    value = Utils.parseLocalTimeInformationCharacteristic(data: data) ?? ""
                 } else {
                     if let string = String(data: data, encoding: .utf8), !string.isEmpty {
                         value = string
@@ -119,50 +142,6 @@ extension Device {
         }
 
         return convertedCharacteristics
-    }
-}
-
-extension Device {
-    static func getAdvertisementValueMapped(for adv:ServiceAdvertisementDataKey?, with inputValue: Any) -> String {
-        switch adv {
-            case .CBAdvertisementDataLocalNameKey, .CBAdvertisementDataServiceData:
-                return inputValue as? String ?? "Unkown" // String
-
-            case .CBAdvertisementDataTxPowerLevel:
-                return inputValue as? String ?? "0" // Int
-
-            case .CBAdvertisementDataServiceUUIDs, .CBAdvertisementDataOverflowServiceUUIDs, .CBAdvertisementDataSolicitedServiceUUIDs:
-                return dataServiceUUIDsConverter(for: inputValue as? String ?? "")
-
-            case .CBAdvertisementDataIsConnectable, .CBAdvertisementDataRxPrimaryPHY, .CBAdvertisementDataRxSecondaryPHY:
-                return boolToDescription(mapToBool(inputValue as? String ?? "0")) // Bool
-
-            case .CBAdvertisementDataManufacturerData:
-                var response = "No data"
-                let stringHex =  utils.anyManufacturerDataToHexString(inputValue as? String ?? "")
-
-                if let dataFromHex = Data(hexString: stringHex) {
-                    response = BluetoothManufacturerMapper().parseManufacturerData(dataFromHex)!
-                }
-
-                return response
-
-            case .CBAdvertisementDataTimestamp:
-                print("Data Timestamp ----> \(inputValue)")
-                let timestamp: Double = NSString(string:"\(inputValue)").doubleValue
-                return utils.timeStampToDate(timestamp) // Double
-
-            default :
-                return inputValue as? String ?? ""
-        }
-    }
-
-    static func boolToDescription(_ value: Bool) -> String {
-        return value ? "Yes" : "No"
-    }
-
-    static func mapToBool(_ value: String) -> Bool {
-        return value == "1"
     }
 
     static func dataServiceUUIDsConverter(for stringData: String) -> String {
@@ -192,168 +171,40 @@ extension Device {
 
         return result
     }
-
-    static func getKeyDescription(for key: String) -> String {
-        var resultKey = ""
-        ServiceAdvertisementDataKey.allCases.forEach { serviceKey in
-            if serviceKey.id == key {
-                resultKey = serviceKey.displayName
-            }
-        }
-        return resultKey
-    }
-
 }
 
-struct utils {
-    static func timeStampToDate(_ timeStamp: Double) -> String {
-        let date = Date(timeIntervalSinceReferenceDate: timeStamp)
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "HH:mm:ss | dd MMM yyyy"
-        return dateFormatter.string(from: date)
-    }
+extension Device {
+    static func getAdvertisementValueMapped(for adv:ServiceAdvertisementDataKey?, with inputValue: Any) -> String {
+        switch adv {
+            case .CBAdvertisementDataLocalNameKey, .CBAdvertisementDataServiceData:
+                return inputValue as? String ?? "Unkown" // String
 
-    static func anyManufacturerDataToHexString(_ data: Any) -> String {
-        let stringInputValue = data as? String ?? ""
-        let startIndex = stringInputValue.firstIndex(of: "x")
-        let endIndex = stringInputValue.lastIndex(of: "}")
-
-        let inputStringHex = String(stringInputValue[(startIndex!)..<endIndex!])
-        var cleanInput = inputStringHex.replacingOccurrences(of: " ", with: "")
-        cleanInput = cleanInput.replacingOccurrences(of: "x", with: "")
-        cleanInput = cleanInput.replacingOccurrences(of: ".", with: "")
-        let output = cleanInput.replacingOccurrences(of: "}", with: "")
-
-        print(output)
-        return output
-    }
-
-    static func parseCurrentTimeCharacteristic(data: Data) -> String? {
-        guard data.count >= 7 else { return nil }
-
-        // Extract year (little-endian)
-        let year = Int(data[0]) | (Int(data[1]) << 8)
-        let month = Int(data[2])
-        let day = Int(data[3])
-        let hours = Int(data[4])
-        let minutes = Int(data[5])
-        let seconds = Int(data[6])
-
-        // Validate the values
-        guard year > 0 && month >= 1 && month <= 12 && day >= 1 && day <= 31 &&
-                hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59 &&
-                seconds >= 0 && seconds <= 59 else {
-            return nil
-        }
-
-        // Create DateComponents
-        var components = DateComponents()
-        components.year = year
-        components.month = month
-        components.day = day
-        components.hour = hours
-        components.minute = minutes
-        components.second = seconds
-
-        // Create Date
-        let calendar = Calendar.current
-        guard let date = calendar.date(from: components) else { return nil }
-
-        // Format the date
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "HH:mm:ss | dd MMM yyyy"
-
-        return dateFormatter.string(from: date)
-    }
-
-    static func parseLocalTimeInformationCharacteristic(data: Data) -> String? {
-        guard data.count >= 2 else { return nil }
-
-        // Extract timezone offset (signed 8-bit integer)
-        let timeZoneQuarters = Int8(bitPattern: data[0])
-        let dstQuarters = Int(data[1])
-
-        // Convert to seconds (each unit = 15 minutes = 900 seconds)
-        let timeZoneOffsetSeconds = Int(timeZoneQuarters) * 15 * 60
-        let dstOffsetHours = Int(TimeInterval(dstQuarters * 15 * 60)/3600)
-
-        // Create TimeZone
-        let timeZone = TimeZone(secondsFromGMT: timeZoneOffsetSeconds)
-
-        var resultString = ""
-        resultString += "\(timeZone?.identifier ?? "")"
-
-        if dstOffsetHours > 0 {
-            resultString += "\nDST: +\(dstOffsetHours) hour"
-        }
-
-        return resultString
-    }
-}
-
-enum ServiceAdvertisementDataKey: String, CaseIterable, Identifiable {
-    var id: String { self.rawValue }
-
-    case CBAdvertisementDataServiceData = "kCBAdvDataServiceData"
-    case CBAdvertisementDataServiceUUIDs = "kCBAdvDataServiceUUIDs"
-    case CBAdvertisementDataOverflowServiceUUIDs = "kCBAdvDataOverflowServiceUUIDs"
-    case CBAdvertisementDataTxPowerLevel = "kCBAdvDataTxPowerLevel"
-    case CBAdvertisementDataIsConnectable = "kCBAdvDataIsConnectable"
-    case CBAdvertisementDataLocalNameKey = "kCBAdvDataLocalNameKey"
-    case CBAdvertisementDataManufacturerData = "kCBAdvDataManufacturerData"
-    case CBAdvertisementDataSolicitedServiceUUIDs = "kCBAdvDataSolicitedServiceUUIDs"
-    case CBAdvertisementDataRxPrimaryPHY = "kCBAdvDataRxPrimaryPHY"
-    case CBAdvertisementDataRxSecondaryPHY = "kCBAdvDataRxSecondaryPHY"
-    case CBAdvertisementDataTimestamp = "kCBAdvDataTimestamp"
-
-    var displayName: String {
-        switch self {
-            case .CBAdvertisementDataServiceData:
-                return "Service Data"
-            case .CBAdvertisementDataServiceUUIDs:
-                return "Service Information Available"
-            case .CBAdvertisementDataOverflowServiceUUIDs:
-                return "Additional Service Information Available"
             case .CBAdvertisementDataTxPowerLevel:
-                return "Transmit power level"
-            case .CBAdvertisementDataIsConnectable:
-                return "Device is connectable"
-            case .CBAdvertisementDataLocalNameKey:
-                return "Device name"
+                return inputValue as? String ?? "0" // Int
+
+            case .CBAdvertisementDataServiceUUIDs, .CBAdvertisementDataOverflowServiceUUIDs, .CBAdvertisementDataSolicitedServiceUUIDs:
+                return dataServiceUUIDsConverter(for: inputValue as? String ?? "")
+
+            case .CBAdvertisementDataIsConnectable, .CBAdvertisementDataRxPrimaryPHY, .CBAdvertisementDataRxSecondaryPHY:
+                return Utils.boolToDescription(Utils.mapToBool(inputValue as? String ?? "0")) // Bool
+
             case .CBAdvertisementDataManufacturerData:
-                return "Manufacturer data"
-            case .CBAdvertisementDataSolicitedServiceUUIDs:
-                return "Solicited services UUIDs"
-            case .CBAdvertisementDataRxPrimaryPHY:
-                return "Physical Layer LE 1M Support"
-            case .CBAdvertisementDataRxSecondaryPHY:
-                return "Physical Layer LE 2M Support"
+                var response = "No data"
+                let stringHex =  Utils.anyManufacturerDataToHexString(inputValue as? String ?? "")
+
+                if let dataFromHex = Data(hexString: stringHex) {
+                    response = BluetoothManufacturerMapper().parseManufacturerData(dataFromHex)!
+                }
+
+                return response
+
             case .CBAdvertisementDataTimestamp:
-                return "Device Timestamp (Date)"
+                print("Data Timestamp ----> \(inputValue)")
+                let timestamp: Double = NSString(string:"\(inputValue)").doubleValue
+                return Utils.timeStampToDate(timestamp) // Double
+
+            default :
+                return inputValue as? String ?? ""
         }
-    }
-
-    static func getDescription(for key: String) -> String? {
-        self.allCases.first(where: { $0.rawValue == key })?.displayName
-    }
-
-    static func setCase(for value: String) -> ServiceAdvertisementDataKey? {
-        .allCases.first(where: { $0.rawValue == value })
-    }
-}
-
-struct DMService {
-    let uid: String = UUID().uuidString
-    let name: String
-    let characteristics: [String : String]
-
-    init(name: String, characteristics: [String : String]) {
-        self.name = name
-        self.characteristics = characteristics
-    }
-
-    init(service: CBService) {
-        self.name = BluetoothUUIDMapper.getServiceDescription(for: service.uuid.uuidString)
-        self.characteristics = Device.characteristicConverter(for: service.characteristics ?? [])
     }
 }

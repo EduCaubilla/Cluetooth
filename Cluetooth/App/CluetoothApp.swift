@@ -13,6 +13,5 @@ struct CluetoothApp: App {
         WindowGroup {
             MainView()
         }
-        .modelContainer(ModelContainerContext.shared.sharedModelContainer)
     }
 }

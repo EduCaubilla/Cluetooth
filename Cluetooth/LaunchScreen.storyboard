@@ -5,7 +5,6 @@
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23721"/>
         <capability name="Named colors" minToolsVersion="9.0"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
-        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -32,7 +31,7 @@
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="vDu-zF-Fre"/>
-                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="dXa-zc-3iM" firstAttribute="centerX" secondItem="5EZ-qb-Rvc" secondAttribute="centerX" id="EVr-EI-dTs"/>
                             <constraint firstItem="dXa-zc-3iM" firstAttribute="centerY" secondItem="5EZ-qb-Rvc" secondAttribute="centerY" id="HQY-de-Al8"/>
@@ -47,12 +46,9 @@
         </scene>
     </scenes>
     <resources>
-        <image name="SplashLogo" width="128" height="128"/>
+        <image name="SplashLogo" width="512" height="512"/>
         <namedColor name="AccentColor">
             <color red="0.33333333333333331" green="0.49019607843137253" blue="0.78431372549019607" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
-        <systemColor name="systemBackgroundColor">
-            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-        </systemColor>
     </resources>
 </document>
