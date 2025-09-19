@@ -11,8 +11,6 @@ import CoreBluetooth
 
 class MainViewModel: ObservableObject {
     //MARK: - PROPERTIES
-    @Environment(\.modelContext) private var modelContext
-
     let bluetoothManager : CBServiceManager?
 
     @Published var foundDevices: [Device] = []

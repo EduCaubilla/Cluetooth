@@ -17,11 +17,31 @@ struct DeviceView: View {
         self.viewModel = viewModel
     }
 
+    //MARK: - FUNCTIONS
+    private func checkDeviceName(for device: Device) -> String {
+        var resultName : String = "Unknown Name"
+        guard let checkDevice = viewModel.linkedDevice else {
+            return resultName
+        }
+
+        if checkDevice.name == "Unknown Name" {
+            if let name = checkDevice.peripheral?.name {
+                if !name.isEmpty && name != "Unknown Name" {
+                    resultName = name
+                }
+            }
+        } else {
+            resultName = checkDevice.name
+        }
+
+        return resultName
+    }
+
     //MARK: - BODY
     var body: some View {
         VStack {
             HStack(alignment: .top) {
-                Text("\(viewModel.linkedDevice?.name ?? "Unknown")")
+                Text("\(checkDeviceName(for: viewModel.linkedDevice!))")
                     .font(.title)
                     .fontWeight(.light)
                     .foregroundStyle(Color.accentColor)

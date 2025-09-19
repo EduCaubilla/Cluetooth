@@ -20,4 +20,5 @@ protocol CBServiceManagerProtocol: ObservableObject {
     func disconnect(from device: Device)
     func writeData(_ data: Data, to characteristicUUID: CBUUID)
     func readValue(for characteristicUUID: CBUUID)
+    func resetConnection()
 }

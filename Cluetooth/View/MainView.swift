@@ -31,6 +31,14 @@ struct MainView: View {
         }
     }
 
+    func scanDevices() {
+        Task {
+            if !viewModel.isScanning {
+                await viewModel.fetchDevices()
+            }
+        }
+    }
+
     //MARK: - BODY
     var body: some View {
         NavigationStack {
@@ -44,7 +52,7 @@ struct MainView: View {
 
                     if viewModel.isScanning {
                         ProgressView()
-                            .padding(.top, 8)
+                            .padding(.top, 10)
                     }
 
                     Spacer()
@@ -93,11 +101,14 @@ struct MainView: View {
                                 } //: FOR LOOP - Devices
                             } //: VSTACK
                             .fullScreenCover(isPresented: $showDeviceDetailView) {
-                                DeviceView(viewModel: .init())
+                                DeviceView(viewModel: viewModel)
                             }
                         } //: HSTACK - Main
                     }
                 } //: LIST
+                .refreshable {
+                    scanDevices()
+                }
                 .padding(.top, -15)
                 .listStyle(.inset)
                 .navigationTitle(Text("Cluetooth"))
@@ -105,11 +116,7 @@ struct MainView: View {
                 .scrollContentBackground(.hidden)
                 .safeAreaInset(edge: .bottom, alignment: .center, spacing: 20) {
                     Button {
-                        Task {
-                            if !viewModel.isScanning {
-                                await viewModel.fetchDevices()
-                            }
-                        }
+                        scanDevices()
                     } label: {
                         Text("Scan for devices")
                             .font(.title3)
@@ -123,7 +130,6 @@ struct MainView: View {
                     .shadow(color: .black.opacity(0.3), radius: 3, x: 2.0, y: 2.0)
                     .padding(20)
                 }
-
             }
         } //: NAV
     } //: VIEW
