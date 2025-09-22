@@ -48,7 +48,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
 
          guard centralManager.state == .poweredOn else {
             updateState(.poweredOff)
-            print("Bluetooth is off, can't start scanning")
+            AppLogger.warning("Bluetooth is off, can't start scanning", category: "app")
             return
         }
 
@@ -73,7 +73,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
             })
         }
 
-        print("Started scanning...")
+        AppLogger.info("Started scanning...")
     }
 
     //MARK: - Stop scan
@@ -87,18 +87,22 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
             updateState(.poweredOn)
         }
 
-        print("Stopped scanning.")
+        AppLogger.info("Discovered devices: \(discoveredDevices.count).")
+        AppLogger.info("Stopped scanning.")
     }
 
     //MARK: - Connect
     func connect(to device: Device) {
         guard let connectPeripheral = device.peripheral else {
             state = .poweredOn
-            print("Peripheral not found.")
+            AppLogger.warning("Peripheral not found.")
             return
         }
 
-        stopScanning()
+        if isScanning {
+            stopScanning()
+        }
+
         updateState(.connecting)
         setDeviceConnectionState(connectPeripheral, connecting: true, connected: false)
 
@@ -108,14 +112,14 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         ])
 
         DispatchQueue.main.async {
-            print("Connection Timer ON --->")
+            AppLogger.info("Connection Timer Started.")
             self.connectionTimer = Timer.scheduledTimer(withTimeInterval: self.connectionTimeout, repeats: false, block: { [weak self] _ in
-                print("Connection Timer OFF --->")
+                AppLogger.info("Connection Timer Ended.")
                 self?.disconnect(from: device, withError: true)
             })
         }
 
-        print("Trying to connect to \(device.name)...")
+        AppLogger.info("Trying to connect to \(device.name)...")
     }
 
     //MARK: - Disconnect
@@ -133,7 +137,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
 
     func disconnect(from device: Device) {
         guard let disconnectPeripheral = device.peripheral else {
-            print("Cannot disconnect: peripheral not found.")
+            AppLogger.warning("Cannot disconnect: \(device.name) not found.")
             return
         }
 
@@ -141,33 +145,33 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
 
         setDeviceConnectionState(disconnectPeripheral, connecting: false, connected: false)
 
-        print("Disconnecting from peripheral.")
+        AppLogger.info("Disconnecting from \(device.name).")
     }
 
     //MARK: - Write
     func writeData(_ data: Data, to characteristicUUID: CBUUID) {
         guard let peripheral = connectedDevice?.peripheral,
               let characteristic = characteristics[characteristicUUID] else {
-            print("Cannot write: peripheral or characteristic not available.")
+            AppLogger.warning("Cannot write: peripheral or characteristic not available.")
             return
         }
 
         let writeType: CBCharacteristicWriteType = characteristic.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
 
         peripheral.writeValue(data, for: characteristic, type: writeType)
-        print("Write data for characteristic: \(characteristicUUID)")
+        AppLogger.info("Writing data for characteristic: \(characteristicUUID).")
     }
 
     //MARK: - Read
     func readValue(for characteristicUUID: CBUUID) {
         guard let peripheral = connectedDevice?.peripheral,
               let characteristic = characteristics[characteristicUUID] else {
-            print("Cannot read: peripheral or characteristic not available.")
+            AppLogger.warning("Cannot read: peripheral or characteristic not available.")
             return
         }
         
         peripheral.readValue(for: characteristic)
-        print("Read value for characteristic: \(characteristicUUID)")
+        AppLogger.info("Reading value for characteristic: \(characteristicUUID).")
     }
 
     //MARK: - Reset
@@ -175,14 +179,17 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         connectedPeripheral = nil
         connectedDevice = nil
         characteristics.removeAll()
-        stopScanning()
 
-        print("Device Connection Reset")
+        if isScanning {
+            stopScanning()
+        }
+
+        AppLogger.info("Device Connection Reset.")
     }
 
     func resetList(){
         discoveredDevices.removeAll()
-        print("Device List Reset")
+        AppLogger.info("Device Main List Reset.")
     }
 
     //MARK: - Helpers
@@ -190,6 +197,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         DispatchQueue.main.async {
             self.state = newState
         }
+        AppLogger.info("Bluetooth state updated to \(state)")
     }
 
     func addOrUpdateDevice(_ device: Device) {

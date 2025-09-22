@@ -102,6 +102,7 @@ struct MainViewDeviceCell: View {
     } //: VIEW
 }
 
+#if DEBUG
 //MARK: - PREVIEW
 //#Preview {
 //    MainViewDeviceCell(
@@ -116,3 +117,4 @@ struct MainViewDeviceCell: View {
 //        showDeviceDetailView: .constant(false)
 //    )
 //}
+#endif

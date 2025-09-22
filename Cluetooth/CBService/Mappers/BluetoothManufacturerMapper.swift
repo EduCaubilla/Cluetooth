@@ -99,7 +99,7 @@ struct BluetoothManufacturerMapper {
 
     func parseManufacturerData(_ data: Data) -> String? {
         guard data.count >= 2 else {
-            print("Manufacturer data too short")
+            AppLogger.debug("Error parsing data: Manufacturer data too short", category: "data")
             return nil
         }
 
@@ -109,8 +109,6 @@ struct BluetoothManufacturerMapper {
         // Extract company-specific data (remaining bytes)
         let companyData = data.subdata(in: 2..<data.count)
         let companyName = mapCompanyIdToManufacturer(companyId)
-
-        print("Manufacturer Data --> Company: \(companyName)")
 
         // Parse company-specific data
         let parsedData = parseCompanySpecificData(companyId: companyId, data: companyData)

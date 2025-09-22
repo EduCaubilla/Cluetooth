@@ -31,8 +31,6 @@ extension CBServiceManager: CBCentralManagerDelegate {
         }
 
         updateState(newState)
-
-        print("Central Manager State changed to: \(central.state.rawValue) -> \(newState)")
     }
 
     //MARK: - Discover Device
@@ -55,14 +53,14 @@ extension CBServiceManager: CBCentralManagerDelegate {
 
     //MARK: - Connect Device
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        print("Connected to \(peripheral.name ?? "Unknown Peripheral")")
+        AppLogger.info("Connected to \(peripheral.name ?? "Unknown Peripheral")")
 
         connectionTimer?.invalidate()
         connectionTimer = nil
 
         connectedPeripheral = peripheral
         updateState(.connected)
-        updateConnectedDeviceState(peripheral) //TODO
+        updateConnectedDeviceState(peripheral)
 
         peripheral.delegate = self
 
@@ -75,7 +73,7 @@ extension CBServiceManager: CBCentralManagerDelegate {
 
     //MARK: - Failed connection
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: (any Error)?) {
-        print("Failed to connect to peripheral: \(error?.localizedDescription ?? "Unknown Error")")
+        AppLogger.warning("Failed to connect to peripheral: \(error?.localizedDescription ?? "Unknown Error")")
 
         connectionTimer?.invalidate()
         connectionTimer = nil
@@ -85,10 +83,10 @@ extension CBServiceManager: CBCentralManagerDelegate {
 
     //MARK: - Disconnect device
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: (any Error)?) {
-        print("Disconnected to \(peripheral.name ?? "Unknown Peripheral")")
+        AppLogger.info("Disconnected of \(peripheral.name ?? "Unknown Peripheral")")
 
         if let error = error {
-            print("Disconnect Error: \(error.localizedDescription)")
+            AppLogger.error("Disconnect Error: \(error.localizedDescription)", error: error)
             updateState(.error(error.localizedDescription))
         }
 

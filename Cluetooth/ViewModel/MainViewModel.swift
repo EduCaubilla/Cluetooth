@@ -68,7 +68,11 @@ class MainViewModel: ObservableObject {
     func connectDevice(_ device: Device) {
         disconnectDevice()
 
-        print("Connecting Device: \(device.name)")
+        if device.expanded {
+            device.expanded.toggle()
+        }
+
+        AppLogger.info("Call to connect device: \(device.name)", category: "ui")
         bluetoothManager?.connect(to: device)
 
         let connectedDevice = foundDevices.first(where: { $0.uid == device.uid })
@@ -81,6 +85,7 @@ class MainViewModel: ObservableObject {
 
     func disconnectDevice() {
         if linkedDevice != nil {
+            AppLogger.info("Call to disconnect device: \(linkedDevice?.name ?? "Unknown name")", category: "ui")
             bluetoothManager?.disconnect(from: linkedDevice!)
         }
 
@@ -88,7 +93,7 @@ class MainViewModel: ObservableObject {
     }
 
     func removeFoundDevice(_ device: Device) {
-        print("Remove Device: \(device.name)")
+        AppLogger.info("Remove Device: \(device.name)", category: "ui")
         foundDevices.remove(at: foundDevices.firstIndex(of: device)!)
     }
 
@@ -105,11 +110,16 @@ class MainViewModel: ObservableObject {
         }
     }
 
-    func restartScan() {
+    func resetList() {
         bluetoothManager?.stopScanning()
         bluetoothManager?.resetList()
+    }
+
+    func restartScan() {
+        resetList()
         Task {
             await fetchDevices()
         }
+        AppLogger.info("Restart scan", category: "ui")
     }
 }

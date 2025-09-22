@@ -26,6 +26,7 @@ struct MainView: View {
     func handleTapChevron(for device: Device) {
         if device.connected {
             showDeviceDetailView = true
+            device.expanded = false
         } else {
             viewModel.toggleDeviceExpanded(uuid: device.uid)
         }

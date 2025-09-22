@@ -35,6 +35,7 @@ extension CBServiceManager {
         if let foundServicesForDevice = peripheral.services {
             connectedDevice?.services = foundServicesForDevice
         }
+        AppLogger.info("Set Services for device: \(peripheral.name ?? "Unknown Device")")
     }
 
     func setConnectedDeviceCharacteristicForService(_ peripheral: CBPeripheral, _ service: CBService) {
@@ -45,12 +46,14 @@ extension CBServiceManager {
                 }
             }
         }
+
+        AppLogger.info("Set Characteristics for service: \(service.uuid), for device: \(peripheral.name ?? "Unknown Device")")
     }
 
     func updateConnectedDeviceCharacteristicForService(_ peripheral: CBPeripheral, _ characteristic: CBCharacteristic) {
         let linkedDevice = discoveredDevices.first(where: {$0.peripheral?.identifier == peripheral.identifier})
         guard linkedDevice == linkedDevice else { return }
 
-        print("Updated Characteristic \(characteristic.uuid) for device: \(peripheral.name ?? "Unknown Device")")
+        AppLogger.info("Updated Characteristic \(characteristic.uuid) for device: \(peripheral.name ?? "Unknown Device")")
     }
 }
