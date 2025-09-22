@@ -17,6 +17,7 @@ class MainViewModel: ObservableObject {
     @Published var linkedDevice: Device?
     @Published var connectionStatus: String = "Disconnected"
     @Published var isScanning: Bool = false
+    @Published var showConnectionTimedOutAlert: Bool = false
 
     //MARK: - INITIALIZER
     init(bluetoothManager: CBServiceManager = CBServiceManager.shared) {
@@ -39,6 +40,7 @@ class MainViewModel: ObservableObject {
                     case .disconnected:
                         return "Disconnected"
                     case .error(let message):
+                        self.checkMessageForAlert(message)
                         return "Error: \(message)"
                     default:
                         return "Ready"
@@ -95,6 +97,12 @@ class MainViewModel: ObservableObject {
         if let index = foundDevices.firstIndex(where: { $0.uid == uuid }) {
             foundDevices[index].expanded.toggle()
             foundDevices = foundDevices
+        }
+    }
+
+    func checkMessageForAlert(_ message: String) {
+        if message == "Connection timed out." {
+            showConnectionTimedOutAlert = true
         }
     }
 }

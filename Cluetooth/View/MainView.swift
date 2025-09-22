@@ -109,7 +109,7 @@ struct MainView: View {
                 .refreshable {
                     scanDevices()
                 }
-                .padding(.top, -15)
+                .padding(.top, -12)
                 .listStyle(.inset)
                 .navigationTitle(Text("Cluetooth"))
                 .navigationBarTitleDisplayMode(.inline)
@@ -129,6 +129,9 @@ struct MainView: View {
                     .clipShape(Capsule())
                     .shadow(color: .black.opacity(0.3), radius: 3, x: 2.0, y: 2.0)
                     .padding(20)
+                }
+                .alert(isPresented: $viewModel.showConnectionTimedOutAlert) {
+                    Alert(title: Text("Connection Timed Out"), message: Text("The device couldn't be connected. You may get closer or make sure it is turned on and try again."), dismissButton: .default(Text("Ok")))
                 }
             }
         } //: NAV

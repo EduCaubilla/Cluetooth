@@ -57,6 +57,9 @@ extension CBServiceManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         print("Connected to \(peripheral.name ?? "Unknown Peripheral")")
 
+        connectionTimer?.invalidate()
+        connectionTimer = nil
+
         connectedPeripheral = peripheral
         updateState(.connected)
         updateConnectedDeviceState(peripheral) //TODO
@@ -73,6 +76,10 @@ extension CBServiceManager: CBCentralManagerDelegate {
     //MARK: - Failed connection
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: (any Error)?) {
         print("Failed to connect to peripheral: \(error?.localizedDescription ?? "Unknown Error")")
+
+        connectionTimer?.invalidate()
+        connectionTimer = nil
+
         updateState(.error(error?.localizedDescription ?? "Connection Failed"))
     }
 

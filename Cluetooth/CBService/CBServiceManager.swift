@@ -26,6 +26,10 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
 
     private let scanTimeout: TimeInterval = 10.0
     private var scanTimer: Timer?
+
+    let connectionTimeout: TimeInterval = 10.0
+    var connectionTimer: Timer?
+
     private let maxDiscoveredDevices: Int = 30
 
     //MARK: - INITIALIZER
@@ -63,8 +67,10 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
             options: options
         )
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + scanTimeout) { [weak self] in
-            self?.stopScanning()
+        DispatchQueue.main.async{
+            self.scanTimer = Timer.scheduledTimer(withTimeInterval: self.scanTimeout, repeats: false, block: { [weak self] _ in
+                self?.stopScanning()
+            })
         }
 
         print("Started scanning...")
@@ -101,10 +107,30 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
             CBConnectPeripheralOptionNotifyOnDisconnectionKey: true
         ])
 
+        DispatchQueue.main.async {
+            print("Connection Timer ON --->")
+            self.connectionTimer = Timer.scheduledTimer(withTimeInterval: self.connectionTimeout, repeats: false, block: { [weak self] _ in
+                print("Connection Timer OFF --->")
+                self?.disconnect(from: device, withError: true)
+            })
+        }
+
         print("Trying to connect to \(device.name)...")
     }
 
     //MARK: - Disconnect
+    func disconnect(from device: Device, withError: Bool) {
+        guard state == .connecting else { return }
+
+        if withError {
+            connectionTimer?.invalidate()
+            connectionTimer = nil
+            updateState(.error("Connection timed out."))
+        }
+
+        disconnect(from: device)
+    }
+
     func disconnect(from device: Device) {
         guard let disconnectPeripheral = device.peripheral else {
             print("Cannot disconnect: peripheral not found.")
@@ -113,7 +139,9 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
 
         centralManager.cancelPeripheralConnection(disconnectPeripheral)
 
-        print("Disconnecting from peripheral ")
+        setDeviceConnectionState(disconnectPeripheral, connecting: false, connected: false)
+
+        print("Disconnecting from peripheral.")
     }
 
     //MARK: - Write
@@ -148,7 +176,8 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         connectedDevice = nil
         characteristics.removeAll()
         stopScanning()
-        print("Connection Reset")
+
+        print("Device Connection Reset")
     }
 
     //MARK: - Helpers
