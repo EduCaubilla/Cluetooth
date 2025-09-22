@@ -79,7 +79,6 @@ class MainViewModel: ObservableObject {
         linkedDevice = device
     }
 
-
     func disconnectDevice() {
         if linkedDevice != nil {
             bluetoothManager?.disconnect(from: linkedDevice!)
@@ -103,6 +102,14 @@ class MainViewModel: ObservableObject {
     func checkMessageForAlert(_ message: String) {
         if message == "Connection timed out." {
             showConnectionTimedOutAlert = true
+        }
+    }
+
+    func restartScan() {
+        bluetoothManager?.stopScanning()
+        bluetoothManager?.resetList()
+        Task {
+            await fetchDevices()
         }
     }
 }

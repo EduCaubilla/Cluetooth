@@ -180,6 +180,11 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         print("Device Connection Reset")
     }
 
+    func resetList(){
+        discoveredDevices.removeAll()
+        print("Device List Reset")
+    }
+
     //MARK: - Helpers
     func updateState(_ newState: BluetoothState) {
         DispatchQueue.main.async {

@@ -56,9 +56,19 @@ struct MainView: View {
                     }
 
                     Spacer()
+
+                    if !viewModel.foundDevices.isEmpty {
+                        Button(action: {
+                            viewModel.restartScan()
+                        }) {
+                            Label("Reset list", systemImage: "arrow.trianglehead.2.clockwise")
+                                .labelStyle(.iconOnly)
+                        }
+                        .tint(.secondary)
+                        .padding(EdgeInsets(top: 7, leading: 0, bottom: 0, trailing: 20))
+                    }
                 }
                 .padding(.bottom, 10)
-
 
                 List {
                     if viewModel.foundDevices.isEmpty {
