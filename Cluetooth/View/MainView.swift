@@ -67,6 +67,7 @@ struct MainView: View {
                         }
                         .tint(.secondary)
                         .padding(EdgeInsets(top: 7, leading: 0, bottom: 0, trailing: 20))
+                        .accessibilityIdentifier("Reset list")
                     }
                 }
                 .padding(.bottom, 10)
@@ -140,6 +141,7 @@ struct MainView: View {
                     .clipShape(Capsule())
                     .shadow(color: .black.opacity(0.3), radius: 3, x: 2.0, y: 2.0)
                     .padding(20)
+                    .accessibilityIdentifier("Scan Button")
                 }
                 .alert(isPresented: $viewModel.showConnectionTimedOutAlert) {
                     Alert(title: Text("Connection Timed Out"), message: Text("The device couldn't be connected. You may get closer or make sure it is turned on and try again."), dismissButton: .default(Text("Ok")))

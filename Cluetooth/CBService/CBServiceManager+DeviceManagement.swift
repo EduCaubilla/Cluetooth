@@ -11,15 +11,19 @@ import CoreBluetooth
 extension CBServiceManager {
     //MARK: - Device Management
     func setDeviceConnectionState(_ peripheral: CBPeripheral, connecting: Bool, connected: Bool) {
-        if let index = discoveredDevices.firstIndex(where: {$0.uid == peripheral.identifier}) {
+        if let index = discoveredDevices.firstIndex(where: {$0.peripheral?.identifier == peripheral.identifier}) {
             discoveredDevices[index].connecting = connecting
             discoveredDevices[index].connected = connected
         }
     }
 
     func updateConnectedDeviceState(_ peripheral: CBPeripheral) {
-        connectedDevice = discoveredDevices.first(where: {$0.uid == peripheral.identifier})
-        setDeviceConnectionState(peripheral, connecting: false, connected: true)
+        if let deviceToConnect = discoveredDevices.first(where: {$0.peripheral?.identifier == peripheral.identifier}) {
+            connectedDevice = deviceToConnect
+            setDeviceConnectionState(peripheral, connecting: false, connected: true)
+        } else {
+            AppLogger.warning("Peripheral with uid: \(peripheral.identifier.uuidString) to set as connected is not in discovered devices")
+        }
     }
 
     func removeConnectedDevice(_ peripheral: CBPeripheral) {

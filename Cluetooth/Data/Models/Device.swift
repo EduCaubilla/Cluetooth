@@ -37,13 +37,13 @@ final class Device: Identifiable, ObservableObject {
 }
 
     //MARK: - INITIALIZER
-    init(peripheral: CBPeripheral,
+    init(peripheral: CBPeripheral?,
          name: String,
          advertisementData: [String: String],
          services: [CBService],
          rssi: Int,
          timestamp: String?) {
-        self.uid = peripheral.identifier.uuidString.isEmpty ? UUID() : UUID(uuidString: peripheral.identifier.uuidString)!
+        self.uid = ((peripheral?.identifier.uuidString.isEmpty) != nil) ? UUID() : UUID(uuidString: (peripheral?.identifier.uuidString) ?? UUID().uuidString)!
         self.peripheral = peripheral
         self.name = name
         self.advertisementData = advertisementData

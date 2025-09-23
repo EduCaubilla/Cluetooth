@@ -11,7 +11,7 @@ import CoreBluetooth
 
 class MainViewModel: ObservableObject {
     //MARK: - PROPERTIES
-    let bluetoothManager : CBServiceManager?
+    let bluetoothManager : (any CBServiceManagerProtocol)?
 
     @Published var foundDevices: [Device] = []
     @Published var linkedDevice: Device?
@@ -20,7 +20,7 @@ class MainViewModel: ObservableObject {
     @Published var showConnectionTimedOutAlert: Bool = false
 
     //MARK: - INITIALIZER
-    init(bluetoothManager: CBServiceManager = CBServiceManager.shared) {
+    init(bluetoothManager: any CBServiceManagerProtocol = CBServiceManager.shared) {
         self.bluetoothManager = bluetoothManager
         setupStates()
         setupObservers()
@@ -28,7 +28,7 @@ class MainViewModel: ObservableObject {
 
     //MARK: - FUNCTIONS
     func setupStates() {
-        bluetoothManager?.$state
+        bluetoothManager?.statePublisher
             .map { state in
                 switch state {
                     case .connected:
@@ -51,18 +51,18 @@ class MainViewModel: ObservableObject {
 
     func setupObservers() {
         // Observe discovered devices
-        bluetoothManager?.$discoveredDevices
+        bluetoothManager?.discoveredDevicesPublisher
             .assign(to: &$foundDevices)
 
         // Observe connected devices
-        bluetoothManager?.$connectedDevice.assign(to: &$linkedDevice)
+        bluetoothManager?.connectedDevicePublisher.assign(to: &$linkedDevice)
 
         // Observe scanning state
-        bluetoothManager?.$isScanning.assign(to: &$isScanning)
+        bluetoothManager?.isScanningPublisher.assign(to: &$isScanning)
     }
 
     func fetchDevices() async {
-        bluetoothManager?.startScanning()
+        bluetoothManager?.startScanning(for: [])
     }
 
     func connectDevice(_ device: Device) {
@@ -75,26 +75,21 @@ class MainViewModel: ObservableObject {
         AppLogger.info("Call to connect device: \(device.name)", category: "ui")
         bluetoothManager?.connect(to: device)
 
-        let connectedDevice = foundDevices.first(where: { $0.uid == device.uid })
-        connectedDevice?.connecting = true
+//        let connectedDevice = foundDevices.first(where: { $0.uid == device.uid })
+//        connectedDevice?.connecting = true
+//
+//        foundDevices = foundDevices.sorted { $0.connecting && !$1.connecting }
 
-        foundDevices = foundDevices.sorted { $0.connecting && !$1.connecting }
-
-        linkedDevice = device
+//        linkedDevice = device
     }
 
     func disconnectDevice() {
         if linkedDevice != nil {
             AppLogger.info("Call to disconnect device: \(linkedDevice?.name ?? "Unknown name")", category: "ui")
-            bluetoothManager?.disconnect(from: linkedDevice!)
+            bluetoothManager?.disconnect(from: linkedDevice!, withError: false)
         }
 
         _ = foundDevices.map { $0.connected = false }
-    }
-
-    func removeFoundDevice(_ device: Device) {
-        AppLogger.info("Remove Device: \(device.name)", category: "ui")
-        foundDevices.remove(at: foundDevices.firstIndex(of: device)!)
     }
 
     func toggleDeviceExpanded(uuid: UUID) {

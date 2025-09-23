@@ -14,6 +14,11 @@ protocol CBServiceManagerProtocol: ObservableObject {
     var connectedDevice: Device? { get }
     var isScanning: Bool { get }
 
+    var statePublisher: Published<BluetoothState>.Publisher { get }
+    var discoveredDevicesPublisher: Published<[Device]>.Publisher { get }
+    var connectedDevicePublisher: Published<Device?>.Publisher { get }
+    var isScanningPublisher: Published<Bool>.Publisher { get }
+
     func startScanning(for serviceUUIDs: [CBUUID]?)
     func stopScanning()
     func connect(to device: Device)
@@ -21,4 +26,5 @@ protocol CBServiceManagerProtocol: ObservableObject {
     func writeData(_ data: Data, to characteristicUUID: CBUUID)
     func readValue(for characteristicUUID: CBUUID)
     func resetConnection()
+    func resetList()
 }

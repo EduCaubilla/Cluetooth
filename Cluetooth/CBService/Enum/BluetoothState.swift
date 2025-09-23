@@ -9,14 +9,14 @@ import Foundation
 
 enum BluetoothState : Equatable {
     case unknown
-    case resetting
-    case unsupported
-    case unauthorized
-    case poweredOff
     case poweredOn
+    case poweredOff
     case scanning
     case connecting
     case connected
     case disconnected
+    case resetting
+    case unsupported
+    case unauthorized
     case error(String)
 }

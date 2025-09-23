@@ -12,10 +12,15 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
     //MARK: - PROPERTIES
     static let shared = CBServiceManager()
 
-    @Published private(set) var state: BluetoothState = .unknown
+    @Published private(set) var state: BluetoothState = .disconnected
     @Published private(set) var discoveredDevices: [Device] = []
     @Published var connectedDevice: Device?
     @Published private(set) var isScanning: Bool = false
+
+    var statePublisher: Published<BluetoothState>.Publisher { $state }
+    var discoveredDevicesPublisher: Published<[Device]>.Publisher { $discoveredDevices }
+    var connectedDevicePublisher: Published<Device?>.Publisher { $connectedDevice }
+    var isScanningPublisher: Published<Bool>.Publisher { $isScanning }
 
     private var centralManager: CBCentralManager
     private let peripheralManager: CBPeripheralManager
@@ -30,7 +35,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
     let connectionTimeout: TimeInterval = 10.0
     var connectionTimer: Timer?
 
-    private let maxDiscoveredDevices: Int = 30
+    private let maxDiscoveredDevices: Int = 3
 
     //MARK: - INITIALIZER
     override init() {
@@ -83,7 +88,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
         scanTimer?.invalidate()
         scanTimer = nil
 
-        if state == .connecting {
+        if state == .scanning {
             updateState(.poweredOn)
         }
 
@@ -124,9 +129,8 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
 
     //MARK: - Disconnect
     func disconnect(from device: Device, withError: Bool) {
-        guard state == .connecting else { return }
-
         if withError {
+            guard state == .connecting else { return }
             connectionTimer?.invalidate()
             connectionTimer = nil
             updateState(.error("Connection timed out."))

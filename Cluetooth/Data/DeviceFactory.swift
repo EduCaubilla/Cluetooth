@@ -9,13 +9,13 @@ import Foundation
 import CoreBluetooth
 
 struct DeviceFactory {
-    static func createDevice(peripheral : CBPeripheral, advertisementData: [String : Any], RSSI: NSNumber) -> Device? {
-        let deviceName = peripheral.name
+    static func createDevice(peripheral : CBPeripheral?, advertisementData: [String : Any], RSSI: NSNumber) -> Device? {
+        let deviceName = peripheral?.name
         ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String
         ?? "Unknown Name"
 
         return Device(
-            peripheral: peripheral,
+            peripheral: peripheral ?? nil,
             name: deviceName,
             advertisementData: Device.advDataConverter(advertisementData),
             services: [],

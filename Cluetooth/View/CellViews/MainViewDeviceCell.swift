@@ -50,6 +50,7 @@ struct MainViewDeviceCell: View {
 
                     ProgressView()
                         .padding(.horizontal, 2)
+                        .accessibilityIdentifier("Progress View")
 
                 } else if device.connected {
                     Text("Connected")
@@ -112,7 +113,7 @@ struct MainViewDeviceCell: View {
 //            services: [],
 //            connected: false
 //        ),
-//        connectAction: {print("Connect Device")},
+//        connectAction: {},
 //        isConnectButtonPressed: .constant(false),
 //        showDeviceDetailView: .constant(false)
 //    )
