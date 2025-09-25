@@ -75,12 +75,7 @@ class MainViewModel: ObservableObject {
         AppLogger.info("Call to connect device: \(device.name)", category: "ui")
         bluetoothManager?.connect(to: device)
 
-//        let connectedDevice = foundDevices.first(where: { $0.uid == device.uid })
-//        connectedDevice?.connecting = true
-//
-//        foundDevices = foundDevices.sorted { $0.connecting && !$1.connecting }
-
-//        linkedDevice = device
+        foundDevices = foundDevices.sorted { $0.connecting && !$1.connecting }
     }
 
     func disconnectDevice() {

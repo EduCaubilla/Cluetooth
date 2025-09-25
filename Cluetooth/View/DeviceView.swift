@@ -126,6 +126,7 @@ struct DeviceView: View {
                     } //: VSTACK - Services
                 } //: VSTACK)
                 .padding(10)
+                .accessibilityIdentifier("Device View")
             } //: SCROLLVIEW
         } //: VSTACK - Main
         .padding(.horizontal, 10)

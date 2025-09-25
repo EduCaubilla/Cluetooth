@@ -85,26 +85,36 @@ final class MainViewUITests: XCTestCase {
         let connectButton = app.buttons["Connect"].firstMatch
         connectButton.tap()
 
-        sleep(8)
+        sleep(5)
 
-        let connectedButton = app.buttons["Connected"].firstMatch
-        XCTAssertTrue(connectedButton.waitForExistence(timeout: 5))
+        let connectedLabel = app.staticTexts["Connected"].firstMatch
+        XCTAssertTrue(connectedLabel.waitForExistence(timeout: 2))
 
         // Simulate tapping chevron for connected device
-        let chevronButton = app.images.firstMatch
+        let chevronButton = app.images["chevron.right"].firstMatch
         chevronButton.tap()
 
-        print(XCUIApplication().debugDescription)
-
-        let detailView = app.otherElements["DeviceView"] // assign accessibilityIdentifier in DeviceView
-        XCTAssertTrue(detailView.waitForExistence(timeout: 5), "Device detail view should appear when tapping chevron on a connected device")
+        let detailView = app.staticTexts["Device View"].firstMatch // assign accessibilityIdentifier in "Device View"
+        XCTAssertTrue(detailView.waitForExistence(timeout: 2), "Device detail view should appear when tapping chevron on a connected device")
     }
 
     func testConnectionTimeoutAlert() throws {
-        // Simulate error by making your mock manager emit "Connection timed out."
+        let scanButton = app.buttons["Scan Button"]
+        scanButton.tap()
+
+        sleep(3)
+
+        let lastConnectButton = app.buttons.matching(identifier: "Connect").allElementsBoundByIndex.last
+        lastConnectButton?.tap()
+
+        sleep(11)
+
+        print(XCUIApplication().debugDescription)
+
         let alert = app.alerts["Connection Timed Out"]
-        XCTAssertTrue(alert.waitForExistence(timeout: 2), "Alert should appear if connection times out")
+        XCTAssertTrue(alert.waitForExistence(timeout: 3), "Alert should appear if connection times out")
         XCTAssertTrue(alert.staticTexts["The device couldn't be connected. You may get closer or make sure it is turned on and try again."].exists)
         alert.buttons["Ok"].tap()
     }
+
 }

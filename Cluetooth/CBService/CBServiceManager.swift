@@ -35,7 +35,7 @@ class CBServiceManager: NSObject, ObservableObject, CBServiceManagerProtocol {
     let connectionTimeout: TimeInterval = 10.0
     var connectionTimer: Timer?
 
-    private let maxDiscoveredDevices: Int = 3
+    private let maxDiscoveredDevices: Int = 20
 
     //MARK: - INITIALIZER
     override init() {

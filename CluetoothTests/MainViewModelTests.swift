@@ -58,7 +58,6 @@ class MainViewModelTests: XCTestCase {
         XCTAssertEqual(mockBluetoothManager.connectCallCount, 1, "Expected BluetoothManager to connect")
         XCTAssertEqual(mockBluetoothManager.lastConnectedDevice, device1, "Expected BluetoothManager to connect to the provided device")
         XCTAssertEqual(mockBluetoothManager.state, .connecting, "Expected BluetoothManager to be in connecting state")
-        XCTAssertEqual(sut.linkedDevice?.uid, device1.uid, "Expected ViewModel to link the connected device")
     }
 
     func test_connectToDevice_whenScanning_shouldEndScanningAndConnect() {
@@ -73,18 +72,27 @@ class MainViewModelTests: XCTestCase {
         XCTAssertEqual(mockBluetoothManager.state, .connecting, "Expected BluetoothManager to be in connecting state")
     }
 
-    func test_connectToDevice_WhenNotScanning_shouldSetLinkedDeviceAndReorderList() {
+    func test_connectToDevice_WhenNotScanning_shouldSetLinkedDeviceAndReorderList() async {
         let device1 = Device(peripheral: nil, name: "Test Device 1", advertisementData: [:], services: [], rssi: 0, timestamp: nil)
         let device2 = Device(peripheral: nil, name: "Test Device 2", advertisementData: [:], services: [], rssi: 0, timestamp: nil)
 
         mockBluetoothManager.simulateDeviceDiscovered(device1)
         mockBluetoothManager.simulateDeviceDiscovered(device2)
+
+        let expectation = XCTestExpectation(description: "Device connected")
+
         sut.connectDevice(device1)
 
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            expectation.fulfill()
+        }
+
+        await fulfillment(of: [expectation], timeout: 5.0)
+
         XCTAssertEqual(mockBluetoothManager.connectCallCount, 1, "Expected BluetoothManager to connect")
-        XCTAssertEqual(sut.linkedDevice, device1, "Expected BluetoothManager to set linkedDevice")
         XCTAssertEqual(sut.foundDevices.first, device1, "Expected list to be reordered with linked device at the top")
         XCTAssertEqual(sut.foundDevices.last, device2, "Expected list to be reordered with not linked devices at the bottom")
+        XCTAssertEqual(sut.linkedDevice, device1, "Expected BluetoothManager to set linkedDevice")
     }
 
     func test_disconnectDevice_WhenLinked_shouldSetLinkedDeviceToNilAndReorderList() {
