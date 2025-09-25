@@ -1,6 +1,7 @@
 {
-  "colors" : [
+  "images" : [
     {
+      "filename" : "cluetooth_logo_splash.png",
       "idiom" : "universal"
     }
   ],
